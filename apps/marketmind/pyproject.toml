@@ -1,0 +1,31 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "marketmind"
+version = "0.1.0"
+description = "MarketMind — financial knowledge graph, entity resolution, and GraphRAG retrieval"
+requires-python = ">=3.11"
+dependencies = [
+    "fie-common",
+    "fie-observability",
+    "fie-schemas",
+    "fie-ai",
+    "fie-auth",
+    "fie-database",
+    "fie-events",
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    # pgvector supplies the SQLAlchemy Vector column type; rapidfuzz backs the
+    # deterministic name matching in entity resolution.
+    "pgvector>=0.3",
+    "rapidfuzz>=3.9",
+    "alembic>=1.13",
+]
+
+[project.optional-dependencies]
+dev = ["fie-testing"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/marketmind"]

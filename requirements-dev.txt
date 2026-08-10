@@ -22,10 +22,17 @@ bcrypt>=4.2
 # --- data ---
 SQLAlchemy[asyncio]>=2.0.32
 asyncpg>=0.29
+# Alembic runs synchronously, so PostgresSettings.sync_dsn selects psycopg
+# rather than asyncpg. Without it every migration fails at import.
+psycopg[binary]>=3.2
 alembic>=1.13
 greenlet>=3.0
 redis>=5.0
 neo4j>=5.24
+# pgvector supplies the SQLAlchemy Vector column type used by MarketMind's
+# chunk store; rapidfuzz backs its deterministic entity-name matching.
+pgvector>=0.3
+rapidfuzz>=3.9
 
 # --- api ---
 fastapi>=0.115

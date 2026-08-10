@@ -122,6 +122,41 @@ services:
     environment:
       OTEL_EXPORTER_ENDPOINT: ${OTEL_EXPORTER_ENDPOINT:?required}
 
+  # MarketMind — the knowledge graph the other products read from.
+  marketmind:
+    <<: *service-defaults
+    build:
+      context: .
+      dockerfile: infrastructure/docker/Dockerfile.marketmind
+    image: ${FIE_MARKETMIND_IMAGE:-fie/marketmind:latest}
+    environment:
+      <<: *common-env
+      FIE_SERVICE_NAME: marketmind
+      FIE_POSTGRES_HOST: postgres
+      FIE_POSTGRES_USER: ${FIE_POSTGRES_USER:?required}
+      FIE_POSTGRES_PASSWORD: ${FIE_POSTGRES_PASSWORD:?required}
+      FIE_POSTGRES_DATABASE: ${FIE_POSTGRES_DATABASE:?required}
+      FIE_NEO4J_URI: bolt://neo4j:7687
+      FIE_NEO4J_USER: ${FIE_NEO4J_USER:?required}
+      FIE_NEO4J_PASSWORD: ${FIE_NEO4J_PASSWORD:?required}
+      FIE_REDIS_HOST: redis
+      FIE_REDIS_PASSWORD: ${FIE_REDIS_PASSWORD:?required}
+      FIE_AUTH_JWT_SECRET: ${FIE_AUTH_JWT_SECRET:?required}
+      FIE_CLAUDE_API_KEY: ${FIE_CLAUDE_API_KEY:?required}
+      # Embeddings are not an Anthropic capability, so production points at a
+      # self-hosted model server. Startup rejects a localhost URL here.
+      MARKETMIND_EMBEDDING_BASE_URL: ${MARKETMIND_EMBEDDING_BASE_URL:?required}
+      MARKETMIND_EMBEDDING_MODEL: ${MARKETMIND_EMBEDDING_MODEL:-nomic-embed-text}
+    expose:
+      - "8001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      neo4j:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
   # TLS termination and rate limiting in front of every application service.
   gateway:
     <<: *service-defaults

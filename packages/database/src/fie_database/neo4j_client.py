@@ -103,7 +103,8 @@ class Neo4jClient:
         started = time.perf_counter()
         try:
             await self._driver.verify_connectivity()
-        except Exception as error:
+        except Exception as error:  # noqa: BLE001 — a health probe reports
+            # failure rather than raising; see AIProvider.health_check.
             return ComponentHealth(
                 name="neo4j",
                 status=HealthStatus.UNHEALTHY,

@@ -1,6 +1,7 @@
 # Phase 1 — Shared Platform
 
-**Status: complete.** Phase 2 (MarketMind) may begin.
+**Status: complete.** Phase 2 (MarketMind) is also complete — see
+[phase-2.md](phase-2.md).
 
 ## Objective
 

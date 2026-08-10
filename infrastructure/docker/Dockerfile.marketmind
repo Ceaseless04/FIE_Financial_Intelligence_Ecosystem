@@ -1,0 +1,73 @@
+# MarketMind — financial knowledge graph service.
+#
+# Self-contained rather than layered on a pre-built platform image: the spec
+# requires each application to be independently deployable, and a base-image
+# dependency means MarketMind cannot be built from a clean checkout without
+# first building something else.
+#
+#   docker build -f infrastructure/docker/Dockerfile.marketmind -t fie/marketmind .
+
+# ---------------------------------------------------------------------------
+# Builder
+# ---------------------------------------------------------------------------
+FROM python:3.11-slim-bookworm AS builder
+
+ENV PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PYTHONDONTWRITEBYTECODE=1
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /build
+
+# Dependency layer first so source edits do not invalidate the wheel cache.
+COPY requirements-dev.txt ./
+RUN python -m venv /opt/venv \
+    && /opt/venv/bin/pip install --upgrade pip \
+    && /opt/venv/bin/pip install -r requirements-dev.txt
+
+COPY packages/ ./packages/
+COPY apps/marketmind/ ./apps/marketmind/
+COPY pyproject.toml ./
+RUN /opt/venv/bin/pip install --no-deps \
+    ./packages/common ./packages/observability ./packages/schemas \
+    ./packages/ai ./packages/auth ./packages/database ./packages/events \
+    ./apps/marketmind
+
+# ---------------------------------------------------------------------------
+# Runtime
+# ---------------------------------------------------------------------------
+FROM python:3.11-slim-bookworm AS runtime
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PATH="/opt/venv/bin:$PATH" \
+    FIE_ENVIRONMENT=production
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/* \
+    && groupadd --system --gid 1001 fie \
+    && useradd --system --uid 1001 --gid fie --create-home --shell /usr/sbin/nologin fie
+
+COPY --from=builder --chown=fie:fie /opt/venv /opt/venv
+
+WORKDIR /app
+# Migrations are copied so the image can run `alembic upgrade head` as a
+# pre-deploy step; the application itself never migrates on startup, because
+# several replicas starting at once would race.
+COPY --chown=fie:fie apps/marketmind/migrations/ /app/migrations/
+COPY --chown=fie:fie apps/marketmind/alembic.ini /app/alembic.ini
+
+USER fie
+
+EXPOSE 8001
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+    CMD curl --fail --silent http://localhost:8001/health/live || exit 1
+
+# One worker per container: scaling is the orchestrator's job, and multiple
+# workers per container hides per-instance memory growth behind an average.
+CMD ["uvicorn", "marketmind.api.app:create_app", "--factory", \
+     "--host", "0.0.0.0", "--port", "8001"]

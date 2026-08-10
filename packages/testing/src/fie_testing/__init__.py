@@ -15,6 +15,7 @@ from fie_testing.factories import (
     make_principal,
     make_source,
 )
+from fie_testing.fake_embeddings import DeterministicEmbeddingProvider, cosine_similarity
 from fie_testing.fake_redis import FakeRedis
 from fie_testing.fakes import (
     FakeAIProvider,
@@ -41,6 +42,7 @@ from fie_testing.infra import (
 __version__ = "0.1.0"
 
 __all__ = [
+    "DeterministicEmbeddingProvider",
     "FakeAIProvider",
     "FakeAnthropicClient",
     "FakeMessage",
@@ -57,6 +59,7 @@ __all__ = [
     "assert_no_secrets",
     "assert_not_presented_as_fact",
     "assert_redacted",
+    "cosine_similarity",
     "has_anthropic_key",
     "make_completion_request",
     "make_event",

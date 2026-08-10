@@ -16,7 +16,12 @@ from fie_ai.contracts import CompletionRequest, Effort, Message, Role, ThinkingM
 from fie_ai.providers.ollama import OllamaProvider
 from fie_ai.structured import parse_structured, structured_request
 from fie_schemas.base import FIEModel
-from fie_testing.infra import ollama_endpoint, require_anthropic_key, require_service
+from fie_testing.infra import (
+    ollama_endpoint,
+    require_anthropic_key,
+    require_ollama_model,
+    require_service,
+)
 
 pytestmark = [pytest.mark.integration]
 
@@ -37,7 +42,11 @@ class TestOllamaLive:
     @pytest.fixture
     async def provider(self):  # type: ignore[no-untyped-def]
         require_service(ollama_endpoint())
-        instance = OllamaProvider(OllamaSettings())
+        settings = OllamaSettings()
+        # A reachable server without the model answers 404, which is otherwise
+        # indistinguishable from a provider bug.
+        require_ollama_model(settings.model)
+        instance = OllamaProvider(settings)
         yield instance
         await instance.aclose()
 

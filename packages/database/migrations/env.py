@@ -4,8 +4,10 @@ The DSN comes from ``FIE_POSTGRES_*`` environment variables rather than
 ``alembic.ini`` so migrations run against dev, CI, and production without a
 credential ever entering the repository.
 
-Product packages register their models by importing them here; until Phase 2
-introduces the first domain tables, only the shared metadata is present.
+This environment covers shared platform tables only. Each product owns its own
+migration history under ``apps/<product>/migrations`` with a namespaced version
+table, so applications stay independently deployable and one product's
+autogenerate run can never propose dropping another's tables.
 """
 
 from __future__ import annotations

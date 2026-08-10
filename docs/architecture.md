@@ -36,6 +36,11 @@ risk models. That boundary is what keeps six products independently testable and
 deployable out of one repository. Phase 1 has no domain logic at all, by
 constraint.
 
+The boundary runs the other way too. MarketMind stores knowledge, not judgement:
+its `Entity` model rejects attributes like `rating` or `price_target` outright,
+because valuation belongs to Atlas and investment judgement to Venture. An
+enforced boundary survives contact with a deadline; a documented one does not.
+
 ### Package dependencies
 
 ```
@@ -155,6 +160,43 @@ acceptable outcome in a financial system.
 Streams are per-product (`fie.events.atlas`), not per-event-type, so a consumer
 interested in several of a product's events reads one stream and filters.
 
+## Knowledge graph and retrieval (MarketMind)
+
+MarketMind is the shared intelligence layer: it records what is true and how
+things connect, and every other product reads from it. Its full record is in
+[phases/phase-2.md](phases/phase-2.md); the architectural points are these.
+
+**Two stores, one model of the world.** Neo4j holds structure — entities, typed
+relationships, validity windows. Postgres holds the documents that structure was
+derived from, plus the pgvector embeddings used to find them. Splitting them is
+not incidental: a graph database storing multi-megabyte filing bodies degrades
+every traversal that touches those nodes. An `entity_mentions` table joins the
+two, which is what turns a graph node into a quotable citation.
+
+**GraphRAG, in six steps.** Vector search seeds; the entities mentioned in those
+chunks become graph anchors; a bounded traversal collects surrounding structure;
+chunks and paths become one context block with explicit source ids; the model
+answers from that context only; and **the citations are verified against the
+supplied ids before the answer is returned.**
+
+That last step is what makes the system usable in a financial product. Without
+it, the output is confident, well-formatted, and unverifiable. A fabricated
+source id is stripped and the answer is flagged `grounded: false` rather than
+being returned as though it were sourced.
+
+**Identity is deterministic.** Entity resolution never uses a model. It decides
+on a ladder — shared authoritative identifier, then *conflicting* identifier
+(decisive against a match, even when names are identical), then canonical name,
+alias, and finally guarded fuzzy similarity. The decision and its evidence are
+returned so a surprising merge can be explained without re-running the pipeline.
+A wrong merge silently corrupts every traversal that touches the node, which is
+why the thresholds are deliberately conservative.
+
+**The model is used where it is actually the right tool** — recognising that
+"Tim Cook, who leads Apple" states an `EXECUTIVE_OF` relationship — and nowhere
+else. Identifier parsing, chunking, resolution, and deduplication are all
+deterministic regex and rules.
+
 ## Observability
 
 Every log line, span, and published event carries the same correlation id, so
@@ -188,8 +230,13 @@ without its credentials being able to reach a real deployment.
 
 ## Phase sequencing
 
-Phase 1 is complete. Phases 2–9 follow in order, each gated on the previous
-phase's tests passing. The order is not arbitrary: MarketMind comes second
-because the knowledge graph is the shared intelligence layer that Atlas,
-Sentinel, and Venture all read from, and building those first would mean
-building them twice.
+Phases 1 and 2 are complete. Phases 3–9 follow in order, each gated on the
+previous phase's tests passing. The order is not arbitrary: MarketMind came
+second because the knowledge graph is the shared intelligence layer that Atlas,
+Sentinel, and Venture all read from, and building those first would have meant
+building it three times.
+
+Each app owns its own `pyproject.toml`, Alembic history with a namespaced
+version table, Dockerfile, and test suites. Sharing one migration history across
+products would make them contend for the head revision and let one product's
+autogenerate run propose dropping another's tables.

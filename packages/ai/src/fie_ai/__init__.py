@@ -34,6 +34,7 @@ from fie_ai.contracts import (
     ThinkingMode,
     TokenUsage,
 )
+from fie_ai.embeddings import EmbeddingProvider, OllamaEmbeddingProvider, Vector
 from fie_ai.factory import build_registry, build_router
 from fie_ai.registry import AIRouter, ProviderRegistry
 from fie_ai.structured import (
@@ -55,8 +56,10 @@ __all__ = [
     "CompletionRequest",
     "CompletionResponse",
     "Effort",
+    "EmbeddingProvider",
     "GroundingReport",
     "Message",
+    "OllamaEmbeddingProvider",
     "OllamaSettings",
     "ProviderCapabilities",
     "ProviderName",
@@ -66,6 +69,7 @@ __all__ = [
     "ThinkingMode",
     "TokenUsage",
     "VLLMSettings",
+    "Vector",
     "__version__",
     "build_registry",
     "build_router",
