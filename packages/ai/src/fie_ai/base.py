@@ -159,7 +159,9 @@ class AIProvider(ABC):
         started = time.perf_counter()
         try:
             await self._ping()
-        except Exception as error:
+        except Exception as error:  # noqa: BLE001 — a health probe reports
+            # failure, it never raises: a vendor SDK throwing something
+            # unexpected must read as "unhealthy", not crash the health endpoint.
             return ComponentHealth(
                 name=f"ai:{self.name}",
                 status=HealthStatus.UNHEALTHY,

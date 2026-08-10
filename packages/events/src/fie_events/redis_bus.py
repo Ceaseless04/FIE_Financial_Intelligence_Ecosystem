@@ -221,7 +221,9 @@ class RedisStreamEventBus(EventBus):
                         seconds=self._settings.handler_timeout_seconds,
                         description=f"handler for {event.event_type}",
                     )
-                except Exception as error:
+                except Exception as error:  # noqa: BLE001 — a handler raising
+                    # anything at all must route the message to retry or the
+                    # dead-letter stream, never kill the consumer loop.
                     self._metrics.record_event_consumed(
                         event_type=event.event_type,
                         stream=subscription.stream,

@@ -109,6 +109,40 @@ services:
       - "4317:4317" # OTLP gRPC
       - "4318:4318" # OTLP HTTP
 
+  # Optional: run MarketMind in a container instead of on the host.
+  #   docker compose -f docker-compose.dev.yml --profile apps up -d marketmind
+  #
+  # Profile-gated because the default `up -d` is meant to start infrastructure
+  # only — day-to-day development runs the app locally with hot reload against
+  # these containers.
+  marketmind:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/Dockerfile.marketmind
+    profiles: ["apps"]
+    environment:
+      FIE_ENVIRONMENT: development
+      FIE_LOG_LEVEL: DEBUG
+      FIE_JSON_LOGS: "false"
+      FIE_POSTGRES_HOST: postgres
+      FIE_POSTGRES_PASSWORD: fie-local-development
+      FIE_NEO4J_URI: bolt://neo4j:7687
+      FIE_NEO4J_PASSWORD: fie-local-development
+      FIE_REDIS_HOST: redis
+      FIE_AI_DEFAULT_PROVIDER: ollama
+      FIE_AI_ENABLED_PROVIDERS: '["ollama"]'
+      FIE_OLLAMA_BASE_URL: http://ollama:11434
+      MARKETMIND_EMBEDDING_BASE_URL: http://ollama:11434
+    ports:
+      - "8001:8001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      neo4j:
+        condition: service_healthy
+      ollama:
+        condition: service_started
+
   # Optional: self-hosted inference for batch workloads. GPU required.
   #   docker compose -f docker-compose.dev.yml --profile vllm up -d vllm
   vllm:

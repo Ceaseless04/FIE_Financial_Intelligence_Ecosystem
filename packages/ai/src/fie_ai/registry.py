@@ -92,6 +92,16 @@ class AIRouter:
     def primary(self) -> AIProvider:
         return self._registry.get(self._primary) if self._primary else self._registry.default
 
+    @property
+    def registry(self) -> ProviderRegistry:
+        """The underlying registry, for health checks and shutdown.
+
+        Routing is the router's job; owning provider lifecycle is the
+        registry's. Services that need to close or probe every provider reach
+        it through here rather than holding a second reference.
+        """
+        return self._registry
+
     def _chain(self, provider: str | None) -> list[AIProvider]:
         """Ordered provider chain for one request, de-duplicated."""
         names: list[str] = []

@@ -44,7 +44,8 @@ jobs:
           pip install -r requirements-dev.txt
           pip install --no-deps -e packages/common -e packages/observability \
             -e packages/schemas -e packages/ai -e packages/auth \
-            -e packages/database -e packages/events -e packages/testing
+            -e packages/database -e packages/events -e packages/testing \
+            -e apps/marketmind
 
       - name: Lint
         run: ruff check .
@@ -63,7 +64,9 @@ jobs:
 
     services:
       postgres:
-        image: postgres:16-alpine
+        # pgvector, not stock postgres: MarketMind's chunk store declares a
+        # `vector` column, and `CREATE EXTENSION vector` fails on the plain image.
+        image: pgvector/pgvector:pg16
         env:
           POSTGRES_USER: fie
           POSTGRES_PASSWORD: fie-local-development
@@ -91,8 +94,11 @@ jobs:
           --health-start-period 30s
 
     env:
-      # Missing infrastructure fails the run instead of skipping silently.
-      FIE_REQUIRE_INFRA: "1"
+      # A service container that failed to start must fail the run rather than
+      # skip silently. Named explicitly rather than "1" because no model server
+      # runs here — live-provider tests are meant to skip, and demanding them
+      # would redden every PR while proving nothing about this change.
+      FIE_REQUIRE_INFRA: "postgres,redis,neo4j"
       FIE_POSTGRES_HOST: localhost
       FIE_POSTGRES_PASSWORD: fie-local-development
       FIE_REDIS_HOST: localhost
@@ -113,17 +119,32 @@ jobs:
           pip install -r requirements-dev.txt
           pip install --no-deps -e packages/common -e packages/observability \
             -e packages/schemas -e packages/ai -e packages/auth \
-            -e packages/database -e packages/events -e packages/testing
+            -e packages/database -e packages/events -e packages/testing \
+            -e apps/marketmind
 
       - name: Unit tests
-        run: pytest packages -m unit -q --junitxml=junit-unit.xml
+        run: pytest packages apps -m unit -q --junitxml=junit-unit.xml
 
       - name: Integration tests
-        run: pytest packages -m integration -q --junitxml=junit-integration.xml
+        run: pytest packages apps -m integration -q --junitxml=junit-integration.xml
+
+      - name: API contract tests
+        run: pytest apps -m api -q --junitxml=junit-api.xml
+
+      - name: Database migrations apply cleanly
+        # A migration that only ever runs via metadata.create_all in tests is a
+        # migration nobody has actually executed. `check` additionally fails when
+        # the models have drifted from the migration history.
+        working-directory: apps/marketmind
+        run: |
+          alembic upgrade head
+          alembic downgrade base
+          alembic upgrade head
+          alembic check
 
       - name: Full suite with coverage gate
         # fail_under = 90 lives in pyproject.toml; this step enforces it.
-        run: pytest packages --cov --cov-report=xml --cov-report=term-missing -q
+        run: pytest packages apps --cov --cov-report=xml --cov-report=term-missing -q
 
       - name: Upload test results
         if: always()
@@ -162,7 +183,7 @@ jobs:
       - name: Static security scan
         # Bandit rules are also enforced inline by ruff's S ruleset; this is the
         # dedicated pass that fails the build on high-severity findings.
-        run: bandit -r packages -ll -x "*/tests/*"
+        run: bandit -r packages apps -ll -x "*/tests/*"
 
       - name: Secret scan
         uses: gitleaks/gitleaks-action@v2
@@ -187,6 +208,9 @@ jobs:
           FIE_NEO4J_USER=neo4j FIE_NEO4J_PASSWORD=ci-validation-password-value \
           NEO4J_ACCEPT_LICENSE_AGREEMENT=yes FIE_DOMAIN=example.invalid \
           OTEL_EXPORTER_ENDPOINT=otel.example.invalid:4317 \
+          FIE_AUTH_JWT_SECRET=ci-validation-jwt-secret-value-32ch \
+          FIE_CLAUDE_API_KEY=sk-ant-ci-validation \
+          MARKETMIND_EMBEDDING_BASE_URL=http://embeddings.internal:8000 \
             docker compose -f docker-compose.prod.yml config --quiet
 
       - name: Build platform image
@@ -200,10 +224,30 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Scan image for vulnerabilities
+      - name: Build MarketMind image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: infrastructure/docker/Dockerfile.marketmind
+          push: false
+          load: true
+          tags: fie/marketmind:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Scan images for vulnerabilities
         uses: aquasecurity/trivy-action@0.28.0
         with:
           image-ref: fie/platform:ci
+          format: table
+          exit-code: "1"
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+
+      - name: Scan MarketMind image for vulnerabilities
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: fie/marketmind:ci
           format: table
           exit-code: "1"
           severity: CRITICAL,HIGH

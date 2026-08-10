@@ -25,7 +25,10 @@ dev = [
 [tool.ruff]
 line-length = 100
 target-version = "py311"
-extend-exclude = ["packages/database/migrations/versions"]
+extend-exclude = [
+    "packages/database/migrations/versions",
+    "apps/*/migrations/versions",
+]
 
 [tool.ruff.lint]
 select = [
@@ -39,6 +42,10 @@ select = [
     "ASYNC",# flake8-async
     "S",    # bandit (security)
     "T20",  # no print
+    # Blind `except Exception` is legitimate in health checks, shutdown paths,
+    # and per-item loops that must not abort a batch — and a mistake almost
+    # everywhere else. Enabling it forces each one to be justified in a noqa.
+    "BLE",
     "RUF",
 ]
 ignore = [
@@ -54,6 +61,7 @@ ignore = [
 known-first-party = [
     "fie_common", "fie_observability", "fie_schemas", "fie_ai",
     "fie_auth", "fie_database", "fie_events", "fie_testing",
+    "marketmind",
 ]
 
 # ---------------------------------------------------------------------------
@@ -79,16 +87,23 @@ files = [
     "packages/database/src",
     "packages/events/src",
     "packages/testing/src",
+    "apps/marketmind/src",
 ]
 mypy_path = [
     "packages/common/src", "packages/observability/src", "packages/schemas/src",
     "packages/ai/src", "packages/auth/src", "packages/database/src",
     "packages/events/src", "packages/testing/src",
+    "apps/marketmind/src",
 ]
-exclude = ["packages/database/migrations/", "build/", "dist/"]
+exclude = [
+    "packages/database/migrations/",
+    "apps/marketmind/migrations/",
+    "build/",
+    "dist/",
+]
 
 [[tool.mypy.overrides]]
-module = ["neo4j.*", "bcrypt.*", "opentelemetry.*"]
+module = ["neo4j.*", "bcrypt.*", "opentelemetry.*", "pgvector.*", "rapidfuzz.*"]
 ignore_missing_imports = true
 
 # ---------------------------------------------------------------------------
@@ -117,6 +132,9 @@ markers = [
     "e2e: cross-service end-to-end tests",
 ]
 filterwarnings = ["error::DeprecationWarning:fie_.*"]
+# Neo4j emits an INFO notification for every "IF NOT EXISTS" schema statement
+# that was already satisfied, which buries the actual failure on a red test.
+log_level = "WARNING"
 
 # ---------------------------------------------------------------------------
 # Coverage — Phase 1 gate is >= 90%
@@ -127,6 +145,7 @@ source = [
     "packages/common/src", "packages/observability/src", "packages/schemas/src",
     "packages/ai/src", "packages/auth/src", "packages/database/src",
     "packages/events/src",
+    "apps/marketmind/src",
 ]
 omit = ["*/tests/*", "*/migrations/*", "*/__main__.py"]
 

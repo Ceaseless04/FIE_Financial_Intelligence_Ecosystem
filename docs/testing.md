@@ -2,20 +2,27 @@
 
 ## Layout
 
-Every package carries its own tests:
+Every package and app carries its own tests:
 
 ```
 packages/<name>/tests/
 ├── unit/          fast, isolated, no external dependencies
 └── integration/   real Postgres / Redis / Neo4j / model server
+
+apps/<name>/tests/
+├── unit/          domain rules, deterministic logic, scripted model output
+├── integration/   real databases, end to end through the pipeline
+├── api/           HTTP contract: auth, validation, error envelope
+└── fixtures/      sample documents shared across the three
 ```
 
 Markers: `unit`, `integration`, `api`, `evaluation`, `e2e`.
 
 ```bash
-pytest packages -m unit           # seconds, no infrastructure
-pytest packages -m integration    # requires the dev stack
-pytest packages --cov            # full suite + 90% coverage gate
+pytest -m unit                    # seconds, no infrastructure
+pytest -m integration             # requires the dev stack
+pytest -m api                     # HTTP contract tests
+pytest --cov                      # full suite + 90% coverage gate
 ```
 
 ## Integration tests use real infrastructure
@@ -33,9 +40,29 @@ SKIPPED — postgres is not reachable at localhost:5432 —
 start it with `docker compose -f docker-compose.dev.yml up -d postgres`
 ```
 
-CI sets `FIE_REQUIRE_INFRA=1`, which converts skips into failures. Without that,
-a container that failed to start would produce a green build full of silent
-skips — the worst possible outcome, because it looks like coverage.
+`FIE_REQUIRE_INFRA` converts those skips into failures. Without it, a container
+that failed to start would produce a green build full of silent skips — the
+worst possible outcome, because it looks like coverage. It takes either `1`
+(every service must be present) or a list of service names; CI uses
+`postgres,redis,neo4j`, because it runs those three as service containers and
+deliberately runs no model server, and a blanket flag would redden every pull
+request for a dependency the change never touched.
+
+### What this catches that a fake cannot
+
+Phase 2 is the concrete argument. Four defects were found only because the
+integration suite ran against real databases:
+
+- A Cypher `MERGE` pattern is directed, so a symmetric relationship was written
+  twice despite both writes carrying an identical dedupe key.
+- A relationship whose endpoint did not exist returned no rows rather than
+  raising, and the repository reported it as written.
+- A migration's `DROP SCHEMA ... CASCADE` deleted Alembic's own version table.
+- Autogenerate proposed dropping the pgvector HNSW index, which SQLAlchemy
+  cannot express and therefore cannot see.
+
+A stand-in that returns what the repository asked for would have agreed with
+every one of those bugs.
 
 ## Testing AI behaviour
 

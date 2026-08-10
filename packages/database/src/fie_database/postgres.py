@@ -137,7 +137,8 @@ class PostgresDatabase:
         try:
             async with self._engine.connect() as connection:
                 await connection.execute(text("SELECT 1"))
-        except Exception as error:
+        except Exception as error:  # noqa: BLE001 — a health probe reports
+            # failure rather than raising; see AIProvider.health_check.
             return ComponentHealth(
                 name="postgres",
                 status=HealthStatus.UNHEALTHY,

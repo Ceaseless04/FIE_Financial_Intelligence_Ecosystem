@@ -95,8 +95,8 @@ class InMemoryEventBus(EventBus):
                 continue
             try:
                 await subscription.handler(event)
-            except Exception as error:
-                # break the publisher or the other subscribers.
+            except Exception as error:  # noqa: BLE001 — one handler's failure
+                # must not break the publisher or the other subscribers.
                 self.dead_lettered.append((event, str(error)))
                 logger.warning(
                     "event_handler_failed",

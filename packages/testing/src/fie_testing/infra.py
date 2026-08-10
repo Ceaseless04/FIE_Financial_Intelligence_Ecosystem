@@ -22,9 +22,23 @@ import pytest
 REQUIRE_INFRA_ENV = "FIE_REQUIRE_INFRA"
 
 
-def infra_required() -> bool:
-    """Whether missing infrastructure should fail rather than skip."""
-    return os.getenv(REQUIRE_INFRA_ENV, "").strip().lower() in {"1", "true", "yes"}
+def infra_required(service: str | None = None) -> bool:
+    """Whether a missing service should fail the run rather than skip it.
+
+    ``FIE_REQUIRE_INFRA=1`` demands every service. A comma-separated list —
+    ``FIE_REQUIRE_INFRA=postgres,redis,neo4j`` — demands only those, which is
+    what CI wants: it runs three service containers but no model server, and a
+    blanket flag would turn "no Ollama here" into a red build on every PR while
+    still catching a container that failed to start.
+    """
+    raw = os.getenv(REQUIRE_INFRA_ENV, "").strip().lower()
+    if not raw:
+        return False
+    if raw in {"1", "true", "yes", "all"}:
+        return True
+    if service is None:
+        return False
+    return service.strip().lower() in {part.strip() for part in raw.split(",")}
 
 
 @lru_cache(maxsize=32)
@@ -103,9 +117,49 @@ def require_service(endpoint: ServiceEndpoint) -> None:
     """Skip (or fail, under ``FIE_REQUIRE_INFRA``) when a service is down."""
     if endpoint.is_available:
         return
-    if infra_required():
-        pytest.fail(f"{REQUIRE_INFRA_ENV} is set but {endpoint.skip_reason}")
+    if infra_required(endpoint.name):
+        pytest.fail(f"{REQUIRE_INFRA_ENV} requires {endpoint.name} but {endpoint.skip_reason}")
     pytest.skip(endpoint.skip_reason)
+
+
+@lru_cache(maxsize=8)
+def _installed_ollama_models(base_url: str) -> tuple[str, ...]:
+    """Models the Ollama server has pulled. Empty when it cannot be asked."""
+    import httpx
+
+    try:
+        response = httpx.get(f"{base_url.rstrip('/')}/api/tags", timeout=5.0)
+        response.raise_for_status()
+        payload = response.json()
+    except Exception:  # noqa: BLE001 — an unreachable server is handled by the
+        # caller's require_service check; this probe only reports what it found.
+        return ()
+    return tuple(str(model.get("name", "")) for model in payload.get("models", []))
+
+
+def require_ollama_model(model: str) -> None:
+    """Skip when a running Ollama server has not pulled ``model``.
+
+    A reachable server missing the model answers with HTTP 404, which surfaces
+    as a provider error indistinguishable from a real failure. Checking first
+    turns "you never ran `ollama pull`" into a message that says so.
+    """
+    base_url = os.getenv("FIE_OLLAMA_BASE_URL", "http://localhost:11434")
+    installed = _installed_ollama_models(base_url)
+    # Ollama reports "name:tag"; an untagged request resolves to ":latest".
+    wanted = model if ":" in model else f"{model}:latest"
+    if wanted in installed or model in installed:
+        return
+
+    reason = (
+        f"Ollama at {base_url} has not pulled {model!r} "
+        f"(installed: {', '.join(installed) or 'none'}) — "
+        f"run `docker compose -f docker-compose.dev.yml exec ollama ollama pull {model}` "
+        f"or set FIE_OLLAMA_MODEL to one of the installed models"
+    )
+    if infra_required("ollama"):
+        pytest.fail(f"{REQUIRE_INFRA_ENV} requires ollama but {reason}")
+    pytest.skip(reason)
 
 
 def has_anthropic_key() -> bool:
@@ -129,6 +183,7 @@ __all__ = [
     "postgres_endpoint",
     "redis_endpoint",
     "require_anthropic_key",
+    "require_ollama_model",
     "require_service",
     "reset_probe_cache",
 ]

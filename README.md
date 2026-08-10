@@ -14,21 +14,24 @@ shared infrastructure layer.
 
 ## Current status
 
-**Phase 1 — Shared Platform: complete.** Phases 2–9 are not started.
+**Phase 1 — Shared Platform: complete.**
+**Phase 2 — MarketMind (knowledge graph): complete.**
+Phases 3–9 are not started.
 
 The platform is built strictly sequentially. Each phase leaves the repository in
 a working state, and no phase begins while the previous phase's gates fail. See
-[docs/phases/phase-1.md](docs/phases/phase-1.md) for what Phase 1 delivered and
-what the Phase 2 entry criteria are.
+[docs/phases/phase-2.md](docs/phases/phase-2.md) for what MarketMind delivered,
+the bugs the integration suite caught, and the Phase 3 entry criteria.
 
 ```
-649 passing (614 unit + 35 integration) · 95.73% coverage (gate: 90%)
-ruff clean · mypy --strict clean
+945 passing (700 unit + 80 integration + 49 API) · 94.47% coverage (gate: 90%)
+ruff clean · mypy --strict clean · migrations verified up/down/up
 ```
 
-Integration tests were run against live PostgreSQL, Redis, Neo4j, and Ollama —
-not mocks. The 5 remaining skips are the live-Claude provider tests, which need
-`FIE_CLAUDE_API_KEY`.
+Integration tests were run against live PostgreSQL (pgvector), Redis, Neo4j, and
+Ollama — not mocks. The 9 skips are live-provider tests needing either
+`FIE_CLAUDE_API_KEY` or an Ollama model that is not pulled by default; both skip
+with an actionable message.
 
 ## The architectural rule
 
@@ -56,12 +59,14 @@ Provenance(kind=AssertionKind.ESTIMATE)  # ValidationError
 ## Repository layout
 
 ```
-apps/                    Six product services (Phases 2-7, not yet started)
+apps/
+  marketmind/            Knowledge graph: entities, relationships, GraphRAG
+                         (Atlas, CFO.ai, Sentinel, FinOps, Venture: Phases 3-7)
 packages/
   common/                Config, error hierarchy, retry/circuit-breaker/timeout
   observability/         Structured logging, OpenTelemetry tracing, metrics
   schemas/               Shared contracts: envelopes, provenance, health
-  ai/                    AIProvider abstraction: Claude, Ollama, vLLM
+  ai/                    AIProvider abstraction: Claude, Ollama, vLLM; embeddings
   auth/                  JWT authentication, RBAC authorization
   database/              PostgreSQL, Redis, Neo4j infrastructure
   events/                Domain events, Redis Streams bus, idempotency, DLQ
@@ -70,6 +75,10 @@ infrastructure/          Dockerfiles, OTel collector configs, Terraform (Phase 9
 docs/                    Architecture and per-phase records
 scripts/                 Database bootstrap, backups
 ```
+
+Each app owns its own `pyproject.toml`, migration history (with a namespaced
+Alembic version table), Dockerfile, and test suites, so it can be built, tested,
+and deployed without the others.
 
 Shared packages provide infrastructure only. **No financial domain logic lives
 in `packages/`** — that boundary is what keeps the six products independently
@@ -86,21 +95,38 @@ cp .env.example .env
 # 2. Start infrastructure
 docker compose -f docker-compose.dev.yml up -d postgres redis neo4j ollama
 docker compose -f docker-compose.dev.yml exec ollama ollama pull llama3.1:8b
+# MarketMind embeds with this model; the width must match the pgvector column.
+docker compose -f docker-compose.dev.yml exec ollama ollama pull nomic-embed-text
 
 # 3. Install
 python -m venv .venv && source .venv/bin/activate     # Windows: .venv\Scripts\activate
 pip install -r requirements-dev.txt
 pip install --no-deps -e packages/common -e packages/observability \
   -e packages/schemas -e packages/ai -e packages/auth \
-  -e packages/database -e packages/events -e packages/testing
+  -e packages/database -e packages/events -e packages/testing \
+  -e apps/marketmind
 
-# 4. Verify
-pytest packages -q
+# 4. Migrate
+(cd apps/marketmind && alembic upgrade head)
+
+# 5. Verify
+pytest -q
 ```
 
 The development stack runs with no API key and no network egress — Ollama is the
 default provider locally. Set `FIE_CLAUDE_API_KEY` and
 `FIE_AI_DEFAULT_PROVIDER=claude` to use Claude.
+
+Run MarketMind's API locally against those containers:
+
+```bash
+python -m marketmind             # host and port come from MARKETMIND_API_*
+# http://localhost:8001/docs     (disabled when FIE_ENVIRONMENT=production)
+```
+
+`requirements.txt` is the runtime dependency set that container images install;
+`requirements-dev.txt` includes it and adds the test and lint tooling. Keeping
+them separate is what stops pytest, ruff, and mypy from shipping to production.
 
 ## Using the AI abstraction
 
@@ -128,14 +154,17 @@ deterministic on the same model, so it skips retry and switches provider.
 ## Testing
 
 ```bash
-pytest packages -m unit           # fast, no external dependencies
-pytest packages -m integration    # requires the dev stack running
-pytest packages --cov            # full suite + 90% coverage gate
+pytest -m unit                    # fast, no external dependencies
+pytest -m integration             # requires the dev stack running
+pytest -m api                     # HTTP contract tests
+pytest --cov                      # full suite + 90% coverage gate
 ```
 
 Integration tests skip with an actionable reason when infrastructure is not
-running. CI sets `FIE_REQUIRE_INFRA=1`, which turns a missing service into a
-failure so a broken container can never look like a green build.
+running. `FIE_REQUIRE_INFRA` turns that skip into a failure so a broken
+container can never look like a green build — set it to `1` for every service,
+or to a list (`postgres,redis,neo4j`, which is what CI uses) when the
+environment deliberately does not provide all of them.
 
 AI behaviour is tested through structured-output validation and grounding
 checks, never by matching exact model text — see
@@ -146,13 +175,15 @@ checks, never by matching exact model text — see
 Every pull request must pass, in order:
 
 ```
-lint → format → typecheck → unit → integration → security → coverage → docker
+lint → format → typecheck → unit → integration → api → migrations
+  → security → coverage → docker
 ```
 
 Run it locally before pushing:
 
 ```bash
-ruff check . && ruff format --check . && mypy && pytest packages --cov
+ruff check . && ruff format --check . && mypy && pytest --cov
+(cd apps/marketmind && alembic upgrade head && alembic check)
 ```
 
 ## Branching
@@ -171,6 +202,8 @@ pass every CI stage.
 ## Documentation
 
 - [docs/architecture.md](docs/architecture.md) — system design and boundaries
-- [docs/phases/phase-1.md](docs/phases/phase-1.md) — Phase 1 record and Phase 2 entry criteria
+- [docs/phases/phase-1.md](docs/phases/phase-1.md) — shared platform record
+- [docs/phases/phase-2.md](docs/phases/phase-2.md) — MarketMind record, the bugs
+  the integration suite caught, and Phase 3 entry criteria
 - [docs/testing.md](docs/testing.md) — testing strategy, especially for AI
 - [docs/security.md](docs/security.md) — secrets, auth, production guardrails
