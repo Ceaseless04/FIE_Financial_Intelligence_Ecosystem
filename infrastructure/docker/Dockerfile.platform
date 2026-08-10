@@ -1,0 +1,63 @@
+# Base image for every FIE Python service.
+#
+# Product services extend this and add their own entrypoint. Multi-stage so the
+# runtime image carries no build toolchain, and the process runs as a
+# non-root user with a read-only-friendly layout.
+
+# ---------------------------------------------------------------------------
+# Builder
+# ---------------------------------------------------------------------------
+FROM python:3.11-slim-bookworm AS builder
+
+ENV PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PYTHONDONTWRITEBYTECODE=1
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /build
+
+# Dependency layer first so source edits do not invalidate the wheel cache.
+COPY requirements-dev.txt ./
+RUN python -m venv /opt/venv \
+    && /opt/venv/bin/pip install --upgrade pip \
+    && /opt/venv/bin/pip install -r requirements-dev.txt
+
+COPY packages/ ./packages/
+COPY pyproject.toml ./
+RUN /opt/venv/bin/pip install --no-deps \
+    ./packages/common ./packages/observability ./packages/schemas \
+    ./packages/ai ./packages/auth ./packages/database ./packages/events
+
+# ---------------------------------------------------------------------------
+# Runtime
+# ---------------------------------------------------------------------------
+FROM python:3.11-slim-bookworm AS runtime
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PATH="/opt/venv/bin:$PATH" \
+    FIE_ENVIRONMENT=production
+
+# curl is used by the container healthcheck.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/* \
+    && groupadd --system --gid 1001 fie \
+    && useradd --system --uid 1001 --gid fie --create-home --shell /usr/sbin/nologin fie
+
+COPY --from=builder --chown=fie:fie /opt/venv /opt/venv
+
+WORKDIR /app
+COPY --chown=fie:fie packages/ /app/packages/
+
+USER fie
+
+# Overridden by each product service.
+EXPOSE 8000
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+    CMD curl --fail --silent http://localhost:8000/health/live || exit 1
+
+CMD ["python", "-c", "import fie_common, fie_ai, fie_auth, fie_database, fie_events; print('FIE platform image OK')"]

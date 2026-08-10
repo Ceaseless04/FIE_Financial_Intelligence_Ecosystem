@@ -1,0 +1,71 @@
+# Production collector: forward to the configured backend, and strip any
+# attribute that could carry a credential before it leaves the cluster.
+#
+# Application code already redacts at the source (fie_observability); this is
+# defence in depth for spans emitted by third-party instrumentation.
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+
+processors:
+  batch:
+    timeout: 5s
+    send_batch_size: 512
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 1024
+    spike_limit_mib: 256
+  attributes/redact:
+    actions:
+      - key: api_key
+        action: delete
+      - key: authorization
+        action: delete
+      - key: password
+        action: delete
+      - key: token
+        action: delete
+      - key: anthropic_api_key
+        action: delete
+      - key: database_url
+        action: delete
+  resource/environment:
+    attributes:
+      - key: deployment.environment
+        value: production
+        action: upsert
+
+exporters:
+  otlp:
+    endpoint: ${env:OTEL_EXPORTER_ENDPOINT}
+    tls:
+      insecure: false
+    retry_on_failure:
+      enabled: true
+      initial_interval: 5s
+      max_interval: 30s
+    sending_queue:
+      enabled: true
+      queue_size: 5000
+
+extensions:
+  health_check:
+    endpoint: 0.0.0.0:13133
+
+service:
+  extensions: [health_check]
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, attributes/redact, resource/environment, batch]
+      exporters: [otlp]
+    metrics:
+      receivers: [otlp]
+      processors: [memory_limiter, resource/environment, batch]
+      exporters: [otlp]
+    logs:
+      receivers: [otlp]
+      processors: [memory_limiter, attributes/redact, resource/environment, batch]
+      exporters: [otlp]

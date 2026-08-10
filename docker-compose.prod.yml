@@ -1,0 +1,172 @@
+# Production stack.
+#
+# Every credential resolves from the environment or a secrets manager — there
+# are no defaults here, by design. A missing variable fails the stack at
+# startup rather than silently falling back to a development value, and
+# fie_common.config additionally rejects placeholder and development-marked
+# secrets when FIE_ENVIRONMENT=production.
+#
+#   docker compose -f docker-compose.prod.yml --env-file /run/secrets/fie.env up -d
+
+name: fie
+
+x-common-env: &common-env
+  FIE_ENVIRONMENT: production
+  FIE_LOG_LEVEL: ${FIE_LOG_LEVEL:-INFO}
+  FIE_DEBUG: "false"
+  FIE_JSON_LOGS: "true"
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+
+x-service-defaults: &service-defaults
+  restart: unless-stopped
+  networks: [fie-internal]
+  logging:
+    driver: json-file
+    options:
+      max-size: "20m"
+      max-file: "5"
+  deploy:
+    resources:
+      limits:
+        cpus: "2.0"
+        memory: 2G
+      reservations:
+        cpus: "0.25"
+        memory: 512M
+
+services:
+  postgres:
+    <<: *service-defaults
+    # Must match the dev image family: RAG retrieval requires the `vector`
+    # extension, which stock postgres images do not ship.
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: ${FIE_POSTGRES_USER:?FIE_POSTGRES_USER is required}
+      POSTGRES_PASSWORD: ${FIE_POSTGRES_PASSWORD:?FIE_POSTGRES_PASSWORD is required}
+      POSTGRES_DB: ${FIE_POSTGRES_DATABASE:?FIE_POSTGRES_DATABASE is required}
+      POSTGRES_INITDB_ARGS: "--data-checksums"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - postgres_backups:/backups
+    # Not published to the host; reachable only on the internal network.
+    expose:
+      - "5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+    deploy:
+      resources:
+        limits:
+          cpus: "4.0"
+          memory: 8G
+
+  redis:
+    <<: *service-defaults
+    image: redis:7-alpine
+    command:
+      - redis-server
+      - --requirepass
+      - ${FIE_REDIS_PASSWORD:?FIE_REDIS_PASSWORD is required}
+      - --appendonly
+      - "yes"
+      - --maxmemory-policy
+      - noeviction # Streams must never be evicted: eviction silently drops events.
+    volumes:
+      - redis_data:/data
+    expose:
+      - "6379"
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a $${FIE_REDIS_PASSWORD} ping | grep PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+    environment:
+      FIE_REDIS_PASSWORD: ${FIE_REDIS_PASSWORD}
+
+  neo4j:
+    <<: *service-defaults
+    image: neo4j:5-enterprise
+    environment:
+      NEO4J_AUTH: ${FIE_NEO4J_USER:?required}/${FIE_NEO4J_PASSWORD:?required}
+      NEO4J_ACCEPT_LICENSE_AGREEMENT: ${NEO4J_ACCEPT_LICENSE_AGREEMENT:?required}
+      NEO4J_server_memory_heap_max__size: ${NEO4J_HEAP_MAX:-4G}
+      NEO4J_server_memory_pagecache_size: ${NEO4J_PAGECACHE:-2G}
+    volumes:
+      - neo4j_data:/data
+      - neo4j_backups:/backups
+    expose:
+      - "7687"
+    healthcheck:
+      test:
+        ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:7474 || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          cpus: "4.0"
+          memory: 8G
+
+  otel-collector:
+    <<: *service-defaults
+    image: otel/opentelemetry-collector-contrib:latest
+    command: ["--config=/etc/otel-collector-config.yaml"]
+    volumes:
+      - ./infrastructure/docker/otel-collector-prod.yaml:/etc/otel-collector-config.yaml:ro
+    expose:
+      - "4317"
+    environment:
+      OTEL_EXPORTER_ENDPOINT: ${OTEL_EXPORTER_ENDPOINT:?required}
+
+  # TLS termination and rate limiting in front of every application service.
+  gateway:
+    <<: *service-defaults
+    image: caddy:2-alpine
+    volumes:
+      - ./infrastructure/docker/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    ports:
+      - "443:443"
+      - "80:80"
+    environment:
+      FIE_DOMAIN: ${FIE_DOMAIN:?FIE_DOMAIN is required}
+    networks: [fie-internal, fie-edge]
+
+  # Nightly logical backups of both databases.
+  backup:
+    <<: *service-defaults
+    image: postgres:16-alpine
+    entrypoint: ["/bin/sh", "/scripts/backup.sh"]
+    volumes:
+      - ./scripts/backup.sh:/scripts/backup.sh:ro
+      - postgres_backups:/backups
+    environment:
+      PGHOST: postgres
+      PGUSER: ${FIE_POSTGRES_USER}
+      PGPASSWORD: ${FIE_POSTGRES_PASSWORD}
+      PGDATABASE: ${FIE_POSTGRES_DATABASE}
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-14}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+networks:
+  fie-internal:
+    driver: bridge
+    internal: true # No egress; only the gateway bridges to the outside.
+  fie-edge:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  postgres_backups:
+  redis_data:
+  neo4j_data:
+  neo4j_backups:
+  caddy_data:
+  caddy_config:

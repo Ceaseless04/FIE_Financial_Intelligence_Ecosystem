@@ -1,0 +1,16 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "fie-schemas"
+version = "0.1.0"
+description = "Shared Pydantic contracts: envelopes, provenance, health, pagination"
+requires-python = ">=3.11"
+dependencies = [
+    "fie-common",
+    "pydantic>=2.8",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/fie_schemas"]

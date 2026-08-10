@@ -1,0 +1,19 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "fie-events"
+version = "0.1.0"
+description = "Domain events and the Redis Streams event bus for the FIE platform"
+requires-python = ">=3.11"
+dependencies = [
+    "fie-common",
+    "fie-database",
+    "fie-observability",
+    "fie-schemas",
+    "redis>=5.0",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/fie_events"]

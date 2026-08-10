@@ -1,0 +1,18 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "fie-auth"
+version = "0.1.0"
+description = "JWT authentication and RBAC authorization for the FIE platform"
+requires-python = ">=3.11"
+dependencies = [
+    "fie-common",
+    "fie-schemas",
+    "PyJWT>=2.9",
+    "bcrypt>=4.2",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/fie_auth"]

@@ -1,0 +1,42 @@
+# --- secrets ---------------------------------------------------------------
+# Never commit real credentials. .env.example is the committed template.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets/
+
+# --- python ----------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+junit*.xml
+
+# --- node ------------------------------------------------------------------
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+
+# --- editors / os ----------------------------------------------------------
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# --- local data ------------------------------------------------------------
+data/
+tmp/
+*.log

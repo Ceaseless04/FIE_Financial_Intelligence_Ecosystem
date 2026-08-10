@@ -1,0 +1,141 @@
+# Development stack.
+#
+# Deliberately zero-setup: weak default credentials, exposed ports, debug
+# logging, and a local model server so the whole ecosystem is exercisable with
+# no API key and no network egress. The production guardrails in
+# fie_common.config reject every credential in this file when
+# FIE_ENVIRONMENT=production, so these values cannot leak into a real deploy.
+#
+#   docker compose -f docker-compose.dev.yml up -d
+#   docker compose -f docker-compose.dev.yml up -d postgres redis neo4j
+
+name: fie-dev
+
+services:
+  postgres:
+    # pgvector build, not stock postgres: the bootstrap script installs the
+    # `vector` extension that RAG retrieval depends on from Phase 2 onward, and
+    # the stock image does not ship it.
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: fie
+      POSTGRES_PASSWORD: fie-local-development
+      POSTGRES_DB: fie
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/db/init-dev.sql:/docker-entrypoint-initdb.d/10-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fie -d fie"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes", "--save", "60", "1"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  neo4j:
+    image: neo4j:5-community
+    environment:
+      NEO4J_AUTH: neo4j/fie-local-development
+      NEO4J_PLUGINS: '["apoc"]'
+      NEO4J_server_memory_heap_max__size: 1G
+      NEO4J_dbms_security_procedures_unrestricted: apoc.*
+    ports:
+      - "7474:7474" # HTTP browser
+      - "7687:7687" # Bolt
+    volumes:
+      - neo4j_data:/data
+      - neo4j_logs:/logs
+    healthcheck:
+      test:
+        ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:7474 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 30s
+
+  # Local model server. Pull a model once the container is up:
+  #   docker compose -f docker-compose.dev.yml exec ollama ollama pull llama3.1:8b
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_models:/root/.ollama
+    healthcheck:
+      test: ["CMD-SHELL", "ollama list >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+
+  # Object storage for filings, decks, and raw financial documents.
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: fie-local-development
+      MINIO_ROOT_PASSWORD: fie-local-development
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  # Collects traces and metrics from every service.
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    command: ["--config=/etc/otel-collector-config.yaml"]
+    volumes:
+      - ./infrastructure/docker/otel-collector-dev.yaml:/etc/otel-collector-config.yaml:ro
+    ports:
+      - "4317:4317" # OTLP gRPC
+      - "4318:4318" # OTLP HTTP
+
+  # Optional: self-hosted inference for batch workloads. GPU required.
+  #   docker compose -f docker-compose.dev.yml --profile vllm up -d vllm
+  vllm:
+    image: vllm/vllm-openai:latest
+    profiles: ["vllm"]
+    command:
+      - "--model"
+      - "meta-llama/Llama-3.1-8B-Instruct"
+      - "--max-model-len"
+      - "16384"
+    ports:
+      - "8000:8000"
+    volumes:
+      - vllm_cache:/root/.cache/huggingface
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+volumes:
+  postgres_data:
+  redis_data:
+  neo4j_data:
+  neo4j_logs:
+  ollama_models:
+  minio_data:
+  vllm_cache:

@@ -1,0 +1,143 @@
+[project]
+name = "financial-intelligence-ecosystem"
+version = "0.1.0"
+description = "Modular AI financial intelligence ecosystem (Atlas, CFO.ai, MarketMind, Sentinel, FinOps, Venture)"
+requires-python = ">=3.11"
+
+# This root project is a workspace container for tooling configuration only.
+# Runtime code lives in packages/* and apps/*, each with its own pyproject.toml.
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.24",
+    "pytest-cov>=5.0",
+    "ruff>=0.6",
+    "mypy>=1.11",
+    "types-redis",
+    "respx>=0.21",
+    "freezegun>=1.5",
+]
+
+# ---------------------------------------------------------------------------
+# Ruff — lint + format
+# ---------------------------------------------------------------------------
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+extend-exclude = ["packages/database/migrations/versions"]
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "I",    # isort
+    "B",    # flake8-bugbear
+    "C4",   # comprehensions
+    "UP",   # pyupgrade
+    "ASYNC",# flake8-async
+    "S",    # bandit (security)
+    "T20",  # no print
+    "RUF",
+]
+ignore = [
+    "S101",  # assert — used intentionally in tests and invariants
+    "B008",  # function call in default arg (FastAPI Depends idiom)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"**/tests/**" = ["S105", "S106", "S311"]
+"packages/testing/**" = ["S105", "S106", "S311"]
+
+[tool.ruff.lint.isort]
+known-first-party = [
+    "fie_common", "fie_observability", "fie_schemas", "fie_ai",
+    "fie_auth", "fie_database", "fie_events", "fie_testing",
+]
+
+# ---------------------------------------------------------------------------
+# Mypy — type checking
+# ---------------------------------------------------------------------------
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_unreachable = true
+disallow_untyped_decorators = false
+plugins = ["pydantic.mypy"]
+
+# Type-check the shipped source trees. Test trees are excluded because several
+# packages intentionally reuse module names (each has its own test_config.py),
+# which mypy cannot disambiguate without __init__.py files everywhere; tests are
+# type-annotated regardless and are verified by running them.
+files = [
+    "packages/common/src",
+    "packages/observability/src",
+    "packages/schemas/src",
+    "packages/ai/src",
+    "packages/auth/src",
+    "packages/database/src",
+    "packages/events/src",
+    "packages/testing/src",
+]
+mypy_path = [
+    "packages/common/src", "packages/observability/src", "packages/schemas/src",
+    "packages/ai/src", "packages/auth/src", "packages/database/src",
+    "packages/events/src", "packages/testing/src",
+]
+exclude = ["packages/database/migrations/", "build/", "dist/"]
+
+[[tool.mypy.overrides]]
+module = ["neo4j.*", "bcrypt.*", "opentelemetry.*"]
+ignore_missing_imports = true
+
+# ---------------------------------------------------------------------------
+# Pytest
+# ---------------------------------------------------------------------------
+[tool.pytest.ini_options]
+minversion = "8.0"
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["packages", "apps", "tests"]
+python_files = ["test_*.py"]
+addopts = [
+    "--strict-markers",
+    "--strict-config",
+    "-ra",
+    # Packages intentionally reuse test module names (each has its own
+    # test_config.py). importlib import mode keeps them from colliding without
+    # littering the tree with __init__.py files.
+    "--import-mode=importlib",
+]
+markers = [
+    "unit: fast, isolated tests with no external dependencies",
+    "integration: tests requiring real infrastructure (Postgres/Redis/Neo4j/AI providers)",
+    "api: HTTP contract tests against an application's API surface",
+    "evaluation: AI grounding / structured-output evaluation tests",
+    "e2e: cross-service end-to-end tests",
+]
+filterwarnings = ["error::DeprecationWarning:fie_.*"]
+
+# ---------------------------------------------------------------------------
+# Coverage — Phase 1 gate is >= 90%
+# ---------------------------------------------------------------------------
+[tool.coverage.run]
+branch = true
+source = [
+    "packages/common/src", "packages/observability/src", "packages/schemas/src",
+    "packages/ai/src", "packages/auth/src", "packages/database/src",
+    "packages/events/src",
+]
+omit = ["*/tests/*", "*/migrations/*", "*/__main__.py"]
+
+[tool.coverage.report]
+fail_under = 90
+show_missing = true
+skip_covered = false
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+    "@(abc\\.)?abstractmethod",
+    "\\.\\.\\.$",
+]

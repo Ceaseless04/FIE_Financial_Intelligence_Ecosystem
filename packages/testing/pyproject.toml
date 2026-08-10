@@ -1,0 +1,22 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "fie-testing"
+version = "0.1.0"
+description = "Shared fakes, factories, and assertions for FIE test suites"
+requires-python = ">=3.11"
+dependencies = [
+    "fie-ai",
+    "fie-auth",
+    "fie-common",
+    "fie-database",
+    "fie-events",
+    "fie-observability",
+    "fie-schemas",
+    "pytest>=8.3",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/fie_testing"]
