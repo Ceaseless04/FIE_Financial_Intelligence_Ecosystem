@@ -120,9 +120,13 @@ default provider locally. Set `FIE_CLAUDE_API_KEY` and
 Run MarketMind's API locally against those containers:
 
 ```bash
-uvicorn marketmind.api.app:create_app --factory --reload --port 8001
-# http://localhost:8001/docs   (disabled when FIE_ENVIRONMENT=production)
+python -m marketmind             # host and port come from MARKETMIND_API_*
+# http://localhost:8001/docs     (disabled when FIE_ENVIRONMENT=production)
 ```
+
+`requirements.txt` is the runtime dependency set that container images install;
+`requirements-dev.txt` includes it and adds the test and lint tooling. Keeping
+them separate is what stops pytest, ruff, and mypy from shipping to production.
 
 ## Using the AI abstraction
 

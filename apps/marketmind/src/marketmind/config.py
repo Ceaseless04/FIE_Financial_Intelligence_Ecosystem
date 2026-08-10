@@ -31,7 +31,11 @@ class MarketMindSettings(FIEBaseSettings):
     )
 
     service_name: str = "marketmind"
-    api_host: str = "0.0.0.0"  # noqa: S104 — bound inside a container network
+    #: Loopback by default. Binding every interface is a deployment decision,
+    #: not a default: the container image opts in explicitly by setting
+    #: MARKETMIND_API_HOST, so a developer running the service locally does not
+    #: silently expose it to their network.
+    api_host: str = "127.0.0.1"
     api_port: int = Field(default=8001, ge=1, le=65535)
 
     # -- embeddings ----------------------------------------------------------

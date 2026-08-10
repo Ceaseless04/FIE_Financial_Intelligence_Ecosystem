@@ -19,17 +19,25 @@ RUN apt-get update \
 
 WORKDIR /build
 
+# Runtime dependencies only — the dev set would ship pytest, ruff, and mypy to
+# production.
+#
 # Dependency layer first so source edits do not invalidate the wheel cache.
-COPY requirements-dev.txt ./
+COPY requirements.txt ./
 RUN python -m venv /opt/venv \
-    && /opt/venv/bin/pip install --upgrade pip \
-    && /opt/venv/bin/pip install -r requirements-dev.txt
+    && /opt/venv/bin/pip install --upgrade pip setuptools wheel \
+    && /opt/venv/bin/pip install -r requirements.txt
 
 COPY packages/ ./packages/
 COPY pyproject.toml ./
 RUN /opt/venv/bin/pip install --no-deps \
     ./packages/common ./packages/observability ./packages/schemas \
     ./packages/ai ./packages/auth ./packages/database ./packages/events
+
+# Packaging tooling is a build-time need; left in place it is the largest
+# source of vulnerability findings in the finished image.
+RUN /opt/venv/bin/pip uninstall --yes setuptools wheel \
+    && /opt/venv/bin/pip uninstall --yes pip
 
 # ---------------------------------------------------------------------------
 # Runtime
@@ -47,6 +55,14 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/* \
     && groupadd --system --gid 1001 fie \
     && useradd --system --uid 1001 --gid fie --create-home --shell /usr/sbin/nologin fie
+
+# The base image ships pip, setuptools, and wheel in the system site-packages,
+# and pip vendors its own msgpack and CacheControl. The application runs from
+# /opt/venv, so none of it is reachable — but a scanner still reports every CVE
+# in it. Removed by absolute path because PATH resolves `python` to the venv.
+RUN /usr/local/bin/python -m pip uninstall --yes setuptools wheel \
+    && /usr/local/bin/python -m pip uninstall --yes pip \
+    && rm -rf /usr/local/lib/python3.11/site-packages/pkg_resources
 
 COPY --from=builder --chown=fie:fie /opt/venv /opt/venv
 

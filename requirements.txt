@@ -1,0 +1,46 @@
+# Runtime dependencies — what a production container actually needs.
+#
+# Kept separate from requirements-dev.txt because container images built from
+# the dev set shipped pytest, ruff, mypy, respx, and freezegun to production:
+# a larger attack surface, a larger image, and a stream of vulnerability
+# findings in tooling that never executes there.
+#
+# Versions are declared per-package in packages/*/pyproject.toml and
+# apps/*/pyproject.toml; this file is the reproducible install used by the
+# Dockerfiles.
+
+# --- core ---
+pydantic>=2.8,<3
+pydantic-settings>=2.4,<3
+
+# --- observability ---
+structlog>=24.4
+opentelemetry-api>=1.27
+opentelemetry-sdk>=1.27
+
+# --- ai providers ---
+anthropic>=0.40
+httpx>=0.27
+
+# --- auth ---
+PyJWT>=2.9
+bcrypt>=4.2
+
+# --- data ---
+SQLAlchemy[asyncio]>=2.0.32
+asyncpg>=0.29
+# Alembic runs synchronously, so PostgresSettings.sync_dsn selects psycopg
+# rather than asyncpg. Without it every migration fails at import.
+psycopg[binary]>=3.2
+alembic>=1.13
+greenlet>=3.0
+redis>=5.0
+neo4j>=5.24
+# pgvector supplies the SQLAlchemy Vector column type used by MarketMind's
+# chunk store; rapidfuzz backs its deterministic entity-name matching.
+pgvector>=0.3
+rapidfuzz>=3.9
+
+# --- api ---
+fastapi>=0.115
+uvicorn[standard]>=0.30

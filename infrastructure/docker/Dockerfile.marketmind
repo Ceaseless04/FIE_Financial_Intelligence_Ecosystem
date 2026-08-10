@@ -22,11 +22,15 @@ RUN apt-get update \
 
 WORKDIR /build
 
+# Runtime dependencies only. Installing the dev set here would ship pytest,
+# ruff, and mypy to production — a larger attack surface and a steady supply of
+# vulnerability findings in tooling that never runs there.
+#
 # Dependency layer first so source edits do not invalidate the wheel cache.
-COPY requirements-dev.txt ./
+COPY requirements.txt ./
 RUN python -m venv /opt/venv \
-    && /opt/venv/bin/pip install --upgrade pip \
-    && /opt/venv/bin/pip install -r requirements-dev.txt
+    && /opt/venv/bin/pip install --upgrade pip setuptools wheel \
+    && /opt/venv/bin/pip install -r requirements.txt
 
 COPY packages/ ./packages/
 COPY apps/marketmind/ ./apps/marketmind/
@@ -36,6 +40,12 @@ RUN /opt/venv/bin/pip install --no-deps \
     ./packages/ai ./packages/auth ./packages/database ./packages/events \
     ./apps/marketmind
 
+# Packaging tooling is a build-time need. Left in place it is the single
+# largest source of vulnerability findings in the finished image, and nothing
+# at runtime — including `alembic upgrade` — imports it.
+RUN /opt/venv/bin/pip uninstall --yes setuptools wheel \
+    && /opt/venv/bin/pip uninstall --yes pip
+
 # ---------------------------------------------------------------------------
 # Runtime
 # ---------------------------------------------------------------------------
@@ -44,13 +54,27 @@ FROM python:3.11-slim-bookworm AS runtime
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PATH="/opt/venv/bin:$PATH" \
-    FIE_ENVIRONMENT=production
+    FIE_ENVIRONMENT=production \
+    # Explicit opt-in to binding every interface. The application defaults to
+    # loopback; inside a container that would make it unreachable, and stating
+    # it here keeps the decision auditable instead of hidden in a default.
+    MARKETMIND_API_HOST=0.0.0.0 \
+    MARKETMIND_API_PORT=8001
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends curl \
     && rm -rf /var/lib/apt/lists/* \
     && groupadd --system --gid 1001 fie \
     && useradd --system --uid 1001 --gid fie --create-home --shell /usr/sbin/nologin fie
+
+# The base image ships pip, setuptools, and wheel in the system site-packages,
+# and pip vendors its own copies of msgpack and CacheControl. The application
+# runs entirely from /opt/venv, so none of it is reachable at runtime — but a
+# scanner still reports every CVE in it. Removed by absolute path because PATH
+# resolves `python` to the virtualenv.
+RUN /usr/local/bin/python -m pip uninstall --yes setuptools wheel \
+    && /usr/local/bin/python -m pip uninstall --yes pip \
+    && rm -rf /usr/local/lib/python3.11/site-packages/pkg_resources
 
 COPY --from=builder --chown=fie:fie /opt/venv /opt/venv
 
@@ -69,5 +93,5 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
 
 # One worker per container: scaling is the orchestrator's job, and multiple
 # workers per container hides per-instance memory growth behind an average.
-CMD ["uvicorn", "marketmind.api.app:create_app", "--factory", \
-     "--host", "0.0.0.0", "--port", "8001"]
+# Host and port come from configuration rather than being repeated here.
+CMD ["python", "-m", "marketmind"]
