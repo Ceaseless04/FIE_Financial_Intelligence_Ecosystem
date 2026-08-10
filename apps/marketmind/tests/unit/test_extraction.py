@@ -8,9 +8,9 @@ edges whose endpoint types are nonsensical never reached the graph.
 from __future__ import annotations
 
 import pytest
-from conftest import make_json_response, make_router
 from fixtures.documents import acme_10k
 
+from conftest import make_json_response, make_router
 from fie_ai.contracts import CompletionResponse, StopReason
 from fie_common.errors import AIProviderError
 from marketmind.domain.entities import EntityType, IdentifierType

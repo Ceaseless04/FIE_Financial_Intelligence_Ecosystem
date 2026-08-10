@@ -15,11 +15,11 @@ from collections.abc import AsyncIterator
 from typing import Any
 
 import pytest
-from conftest import make_json_response, make_router
 from fixtures.documents import acme_10k, acme_news, northwind_10k
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from conftest import make_json_response, make_router
 from fie_database.config import Neo4jSettings, PostgresSettings
 from fie_database.neo4j_client import Neo4jClient
 from fie_database.postgres import PostgresDatabase
