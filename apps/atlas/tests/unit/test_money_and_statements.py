@@ -11,12 +11,12 @@ from datetime import date
 from decimal import Decimal
 
 import pytest
+from atlas_fixtures import annual_period, balance_sheet, fact, income_statement, instant_period
 from pydantic import ValidationError as PydanticValidationError
 
 from atlas.domain.money import Money, Rate, Shares, sum_money, to_decimal
 from atlas.domain.periods import FiscalPeriod, PeriodKind
 from atlas.domain.statements import BalanceSheet, CashFlowStatement, FinancialStatements
-from conftest import annual_period, balance_sheet, fact, income_statement, instant_period
 
 pytestmark = pytest.mark.unit
 

@@ -12,6 +12,7 @@ from datetime import date
 from decimal import Decimal
 
 import pytest
+from atlas_fixtures import balance_sheet, income_statement, statements
 
 from atlas.analysis import ratios
 from atlas.analysis.comparables import (
@@ -37,7 +38,6 @@ from atlas.analysis.growth import (
 from atlas.analysis.results import Unit
 from atlas.domain.money import Money, Rate, Shares
 from atlas.domain.periods import FiscalPeriod
-from conftest import balance_sheet, income_statement, statements
 from fie_common.errors import ValidationError
 from fie_schemas.provenance import AssertionKind
 

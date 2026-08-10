@@ -16,15 +16,16 @@ shared infrastructure layer.
 
 **Phase 1 — Shared Platform: complete.**
 **Phase 2 — MarketMind (knowledge graph): complete.**
-Phases 3–9 are not started.
+**Phase 3 — Atlas (financial research): complete.**
+Phases 4–9 are not started.
 
 The platform is built strictly sequentially. Each phase leaves the repository in
 a working state, and no phase begins while the previous phase's gates fail. See
-[docs/phases/phase-2.md](docs/phases/phase-2.md) for what MarketMind delivered,
-the bugs the integration suite caught, and the Phase 3 entry criteria.
+[docs/phases/phase-3.md](docs/phases/phase-3.md) for what Atlas delivered, the
+bugs the suite caught, and the Phase 4 entry criteria.
 
 ```
-945 passing (700 unit + 80 integration + 49 API) · 94.47% coverage (gate: 90%)
+1138 passing (948 unit + 115 integration + 84 API) · 92.78% coverage (gate: 90%)
 ruff clean · mypy --strict clean · migrations verified up/down/up
 ```
 
@@ -61,7 +62,8 @@ Provenance(kind=AssertionKind.ESTIMATE)  # ValidationError
 ```
 apps/
   marketmind/            Knowledge graph: entities, relationships, GraphRAG
-                         (Atlas, CFO.ai, Sentinel, FinOps, Venture: Phases 3-7)
+  atlas/                 Financial research: filings, analysis, valuation, reports
+                         (CFO.ai, Sentinel, Venture, FinOps: Phases 4-7)
 packages/
   common/                Config, error hierarchy, retry/circuit-breaker/timeout
   observability/         Structured logging, OpenTelemetry tracing, metrics
@@ -117,11 +119,14 @@ The development stack runs with no API key and no network egress — Ollama is t
 default provider locally. Set `FIE_CLAUDE_API_KEY` and
 `FIE_AI_DEFAULT_PROVIDER=claude` to use Claude.
 
-Run MarketMind's API locally against those containers:
+Run the APIs locally against those containers:
 
 ```bash
 python -m marketmind             # host and port come from MARKETMIND_API_*
 # http://localhost:8001/docs     (disabled when FIE_ENVIRONMENT=production)
+
+python -m atlas                  # host and port come from ATLAS_API_*
+# http://localhost:8002/docs
 ```
 
 `requirements.txt` is the runtime dependency set that container images install;
@@ -184,6 +189,7 @@ Run it locally before pushing:
 ```bash
 ruff check . && ruff format --check . && mypy && pytest --cov
 (cd apps/marketmind && alembic upgrade head && alembic check)
+(cd apps/atlas && alembic upgrade head && alembic check)
 ```
 
 ## Branching
@@ -203,6 +209,8 @@ pass every CI stage.
 
 - [docs/architecture.md](docs/architecture.md) — system design and boundaries
 - [docs/phases/phase-1.md](docs/phases/phase-1.md) — shared platform record
+- [docs/phases/phase-3.md](docs/phases/phase-3.md) — Atlas record: numeric
+  grounding, Decimal discipline end to end, and the bugs the suite caught
 - [docs/phases/phase-2.md](docs/phases/phase-2.md) — MarketMind record, the bugs
   the integration suite caught, and Phase 3 entry criteria
 - [docs/testing.md](docs/testing.md) — testing strategy, especially for AI

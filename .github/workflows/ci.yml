@@ -45,7 +45,7 @@ jobs:
           pip install --no-deps -e packages/common -e packages/observability \
             -e packages/schemas -e packages/ai -e packages/auth \
             -e packages/database -e packages/events -e packages/testing \
-            -e apps/marketmind
+            -e apps/marketmind -e apps/atlas
 
       - name: Lint
         run: ruff check .
@@ -120,7 +120,7 @@ jobs:
           pip install --no-deps -e packages/common -e packages/observability \
             -e packages/schemas -e packages/ai -e packages/auth \
             -e packages/database -e packages/events -e packages/testing \
-            -e apps/marketmind
+            -e apps/marketmind -e apps/atlas
 
       - name: Unit tests
         run: pytest packages apps -m unit -q --junitxml=junit-unit.xml
@@ -131,11 +131,22 @@ jobs:
       - name: API contract tests
         run: pytest apps -m api -q --junitxml=junit-api.xml
 
-      - name: Database migrations apply cleanly
+      - name: MarketMind migrations apply cleanly
         # A migration that only ever runs via metadata.create_all in tests is a
         # migration nobody has actually executed. `check` additionally fails when
         # the models have drifted from the migration history.
         working-directory: apps/marketmind
+        run: |
+          alembic upgrade head
+          alembic downgrade base
+          alembic upgrade head
+          alembic check
+
+      - name: Atlas migrations apply cleanly
+        # Run after MarketMind's so both histories coexist in one database —
+        # which is the arrangement the namespaced version tables exist for, and
+        # the one a shared alembic_version table would break.
+        working-directory: apps/atlas
         run: |
           alembic upgrade head
           alembic downgrade base
@@ -211,6 +222,7 @@ jobs:
           FIE_AUTH_JWT_SECRET=ci-validation-jwt-secret-value-32ch \
           FIE_CLAUDE_API_KEY=sk-ant-ci-validation \
           MARKETMIND_EMBEDDING_BASE_URL=http://embeddings.internal:8000 \
+          ATLAS_MARKETMIND_TOKEN=ci-validation-service-token \
             docker compose -f docker-compose.prod.yml config --quiet
 
       - name: Build platform image
@@ -235,6 +247,17 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      - name: Build Atlas image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: infrastructure/docker/Dockerfile.atlas
+          push: false
+          load: true
+          tags: fie/atlas:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
       - name: Scan images for vulnerabilities
         uses: aquasecurity/trivy-action@0.28.0
         with:
@@ -248,6 +271,15 @@ jobs:
         uses: aquasecurity/trivy-action@0.28.0
         with:
           image-ref: fie/marketmind:ci
+          format: table
+          exit-code: "1"
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+
+      - name: Scan Atlas image for vulnerabilities
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: fie/atlas:ci
           format: table
           exit-code: "1"
           severity: CRITICAL,HIGH

@@ -11,8 +11,8 @@ from __future__ import annotations
 from collections.abc import AsyncIterator
 
 import pytest
+from marketmind_fixtures import make_entity
 
-from conftest import make_entity
 from fie_database.config import Neo4jSettings
 from fie_database.neo4j_client import Neo4jClient
 from fie_schemas.provenance import Provenance, SourceReference, SourceType

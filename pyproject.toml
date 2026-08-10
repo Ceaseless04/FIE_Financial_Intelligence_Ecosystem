@@ -100,6 +100,7 @@ mypy_path = [
 exclude = [
     "packages/database/migrations/",
     "apps/marketmind/migrations/",
+    "apps/atlas/migrations/",
     "build/",
     "dist/",
 ]

@@ -5,9 +5,9 @@ from __future__ import annotations
 from datetime import date
 
 import pytest
+from marketmind_fixtures import make_entity, make_source
 from pydantic import ValidationError as PydanticValidationError
 
-from conftest import make_entity, make_source
 from fie_schemas.provenance import Provenance
 from marketmind.domain.documents import Chunk, Document, DocumentType
 from marketmind.domain.entities import Entity, EntityType, Identifier, IdentifierType

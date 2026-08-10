@@ -11,8 +11,8 @@ from dataclasses import dataclass, field
 from typing import Any
 
 import pytest
+from marketmind_fixtures import make_json_response, make_router
 
-from conftest import make_json_response, make_router
 from fie_ai.contracts import CompletionResponse, StopReason
 from fie_common.errors import AIProviderResponseError, NotFoundError
 from fie_testing import DeterministicEmbeddingProvider

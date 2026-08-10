@@ -37,6 +37,12 @@ class PeriodKind(StrEnum):
         return self is not PeriodKind.INSTANT
 
 
+def period_key(kind: PeriodKind, fiscal_year: int, quarter: int | None) -> str:
+    """The stable identity of a period. Defined once so a lookup by parts and a
+    lookup by object cannot disagree about what row they are asking for."""
+    return f"{kind}:{fiscal_year}:{quarter or 0}"
+
+
 class FiscalPeriod(FrozenModel):
     """A dated reporting period.
 
@@ -103,6 +109,18 @@ class FiscalPeriod(FrozenModel):
             return f"FY{self.fiscal_year} YTD"
         return f"FY{self.fiscal_year}"
 
+    @property
+    def key(self) -> str:
+        """Stable identity for this period, suitable as a database key.
+
+        ``quarterly:2025:3``, ``annual:2025:0``. The explicit zero is the point:
+        PostgreSQL treats NULLs as distinct in a unique constraint, so a
+        constraint over ``(entity_id, fiscal_year, kind, fiscal_quarter)`` would
+        silently permit two annual statement sets for the same company — the
+        exact duplicate it appears to forbid.
+        """
+        return period_key(self.kind, self.fiscal_year, self.fiscal_quarter)
+
     def is_comparable_to(self, other: FiscalPeriod) -> bool:
         """Whether a growth rate between these two periods is meaningful.
 
@@ -120,4 +138,4 @@ class FiscalPeriod(FrozenModel):
         return self.end_date < other.end_date
 
 
-__all__ = ["FiscalPeriod", "PeriodKind"]
+__all__ = ["FiscalPeriod", "PeriodKind", "period_key"]

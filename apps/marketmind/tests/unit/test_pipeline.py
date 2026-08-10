@@ -14,8 +14,8 @@ from typing import Any
 
 import pytest
 from fixtures.documents import acme_10k, acme_news
+from marketmind_fixtures import make_json_response, make_router
 
-from conftest import make_json_response, make_router
 from fie_common.errors import EventBusError, ValidationError
 from fie_events.bus import InMemoryEventBus
 from fie_events.schemas import DomainEvent

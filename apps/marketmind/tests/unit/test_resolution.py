@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import pytest
+from marketmind_fixtures import make_entity
 
-from conftest import make_entity
 from marketmind.domain.entities import EntityType, IdentifierType
 from marketmind.resolution.normalization import (
     blocking_key,

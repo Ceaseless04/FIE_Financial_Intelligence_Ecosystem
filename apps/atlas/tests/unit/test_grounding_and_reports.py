@@ -11,6 +11,7 @@ from __future__ import annotations
 from decimal import Decimal
 
 import pytest
+from atlas_fixtures import make_json_response, make_router, source, statements
 
 from atlas.analysis.ratios import analyze
 from atlas.research.grounding import (
@@ -19,7 +20,6 @@ from atlas.research.grounding import (
     extract_numeric_claims,
 )
 from atlas.research.reports import ReportRequest, ReportService
-from conftest import make_json_response, make_router, source, statements
 from fie_ai.contracts import CompletionResponse, StopReason
 from fie_common.errors import AIProviderResponseError, ValidationError
 from fie_schemas.provenance import AssertionKind
