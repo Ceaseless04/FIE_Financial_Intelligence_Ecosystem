@@ -14,4 +14,9 @@ respx>=0.21
 freezegun>=1.5
 ruff>=0.6
 mypy>=1.11
-types-redis
+
+# No `types-redis`. redis ships inline types (`py.typed`) from v5, and the stub
+# package stopped at the 4.6 API — where the async client had `close()` and not
+# `aclose()`. mypy prefers a stub package over inline types, so installing it
+# does not add type safety, it replaces accurate types with three-major-versions
+# stale ones and fails the type check on correct code.
