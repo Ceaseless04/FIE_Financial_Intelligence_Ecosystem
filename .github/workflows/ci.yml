@@ -286,7 +286,9 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Scan images for vulnerabilities
-        uses: aquasecurity/trivy-action@0.28.0
+        # The tag is v-prefixed. `@0.28.0` does not resolve, which failed the
+        # job before a single step ran — action references are resolved upfront.
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: fie/platform:ci
           format: table
@@ -295,7 +297,9 @@ jobs:
           ignore-unfixed: true
 
       - name: Scan MarketMind image for vulnerabilities
-        uses: aquasecurity/trivy-action@0.28.0
+        # The tag is v-prefixed. `@0.28.0` does not resolve, which failed the
+        # job before a single step ran — action references are resolved upfront.
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: fie/marketmind:ci
           format: table
@@ -304,7 +308,9 @@ jobs:
           ignore-unfixed: true
 
       - name: Scan Atlas image for vulnerabilities
-        uses: aquasecurity/trivy-action@0.28.0
+        # The tag is v-prefixed. `@0.28.0` does not resolve, which failed the
+        # job before a single step ran — action references are resolved upfront.
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: fie/atlas:ci
           format: table
