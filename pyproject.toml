@@ -61,7 +61,7 @@ ignore = [
 known-first-party = [
     "fie_common", "fie_observability", "fie_schemas", "fie_ai",
     "fie_auth", "fie_database", "fie_events", "fie_testing",
-    "marketmind",
+    "marketmind", "atlas",
 ]
 
 # ---------------------------------------------------------------------------
@@ -88,16 +88,19 @@ files = [
     "packages/events/src",
     "packages/testing/src",
     "apps/marketmind/src",
+    "apps/atlas/src",
 ]
 mypy_path = [
     "packages/common/src", "packages/observability/src", "packages/schemas/src",
     "packages/ai/src", "packages/auth/src", "packages/database/src",
     "packages/events/src", "packages/testing/src",
     "apps/marketmind/src",
+    "apps/atlas/src",
 ]
 exclude = [
     "packages/database/migrations/",
     "apps/marketmind/migrations/",
+    "apps/atlas/migrations/",
     "build/",
     "dist/",
 ]
@@ -146,6 +149,7 @@ source = [
     "packages/ai/src", "packages/auth/src", "packages/database/src",
     "packages/events/src",
     "apps/marketmind/src",
+    "apps/atlas/src",
 ]
 omit = ["*/tests/*", "*/migrations/*", "*/__main__.py"]
 

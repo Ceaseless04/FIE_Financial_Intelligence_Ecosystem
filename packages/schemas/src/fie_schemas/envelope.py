@@ -4,13 +4,32 @@ from __future__ import annotations
 
 from typing import Any, Generic, TypeVar
 
-from pydantic import Field, model_validator
+from pydantic import Field, field_validator, model_validator
 
 from fie_common.errors import FIEError
 from fie_common.utils import utc_now
 from fie_schemas.base import FIEModel, FrozenModel
 
 T = TypeVar("T")
+
+#: Types that survive ``json.dumps`` unchanged.
+_JSON_SCALARS = (str, int, float, bool, type(None))
+
+
+def json_safe(value: Any) -> Any:
+    """Coerce a value into something JSON can represent.
+
+    Containers are walked; anything else that is not already a JSON scalar
+    becomes its ``str``. Nothing is dropped, because a detail a caller cannot
+    read is still better than one they never receive.
+    """
+    if isinstance(value, _JSON_SCALARS):
+        return value
+    if isinstance(value, dict):
+        return {str(key): json_safe(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple, set, frozenset)):
+        return [json_safe(item) for item in value]
+    return str(value)
 
 
 class ErrorDetail(FrozenModel):
@@ -21,6 +40,19 @@ class ErrorDetail(FrozenModel):
     retryable: bool = False
     details: dict[str, Any] = Field(default_factory=dict)
     correlation_id: str | None = None
+
+    @field_validator("details", mode="before")
+    @classmethod
+    def _make_details_serializable(cls, value: Any) -> Any:
+        """Guarantee the body can actually be written.
+
+        Error details arrive from anywhere — including Pydantic's own validation
+        errors, whose ``ctx`` carries the raised ``ValueError`` *object*.
+        Serializing that raises inside the error handler, which turns a client's
+        malformed request into a 500 and hides what was actually wrong. An error
+        path that can itself fail is the one place that must not.
+        """
+        return json_safe(value) if isinstance(value, dict) else value
 
     @classmethod
     def from_error(cls, error: FIEError, *, correlation_id: str | None = None) -> ErrorDetail:
@@ -113,4 +145,4 @@ class Page(FIEModel, Generic[T]):
         )
 
 
-__all__ = ["ErrorDetail", "Page", "PageInfo", "PageRequest", "ResponseEnvelope"]
+__all__ = ["ErrorDetail", "Page", "PageInfo", "PageRequest", "ResponseEnvelope", "json_safe"]

@@ -33,7 +33,9 @@ import pytest
 #: Configuration namespaces owned by this repository. Anything with these
 #: prefixes is service configuration, and a unit test that depends on one is
 #: reading its environment rather than exercising the code.
-_CONFIG_PREFIXES = ("FIE_", "MARKETMIND_")
+#: One entry per application namespace; a new app needs a new entry, or its
+#: unit tests silently start reading whatever the environment says.
+_CONFIG_PREFIXES = ("FIE_", "MARKETMIND_", "ATLAS_")
 
 
 @pytest.fixture(autouse=True)

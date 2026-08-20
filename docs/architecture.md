@@ -197,6 +197,53 @@ why the thresholds are deliberately conservative.
 else. Identifier parsing, chunking, resolution, and deduplication are all
 deterministic regex and rules.
 
+## Financial analysis and research (Atlas)
+
+Atlas turns filings into research a reader can check. Its full record is in
+[phases/phase-3.md](phases/phase-3.md); the architectural points are these.
+
+**The ordering is the architecture.** Statements are extracted and validated,
+every figure is computed deterministically, a valuation is optionally produced
+from stated assumptions, company context is fetched from MarketMind — and only
+then is a model called, to explain figures that already exist. It never runs the
+other way round.
+
+**Decimal end to end, with three separate refusals.** `Money` rejects a float at
+construction. Storage uses `NUMERIC(28,4)`, because `DOUBLE PRECISION` would
+silently reintroduce exactly the error the domain layer refuses. And every
+figure crosses the HTTP boundary as a *string*, because JSON's only numeric type
+is a double — a response emitting `412600000.5` as a number hands the client a
+float and undoes the discipline at the last step. A discipline enforced in two
+of the three places is not enforced.
+
+**The accounting identities are extraction validation.** Assets equal
+liabilities plus equity; gross profit equals revenue less cost of revenue; the
+cash flow statement reconciles. These are true of every filing ever published,
+so a violation means the transcription is wrong — and the statement is rejected
+rather than stored. That check is what makes a model usable for reading filings
+at all: transcription is checkable, and a transcription that fails its check is
+discarded.
+
+**Numeric grounding is Phase 2's citation check applied to numbers.** Every
+figure in a generated report is matched against what Atlas computed, by rounding
+each computed value to the significant digits the model actually wrote.
+"$1.6 billion" matches a computed 1,613,590,000; "$1.9 billion" matches nothing
+at any tolerance. Rounding is permitted; invention is not.
+
+**Provenance does the enforcing.** A metric is built through
+`Provenance.derived`, which the shared validator forbids from naming a model, so
+a computed figure *cannot* be attributed to Claude — the object will not
+construct. Projections use `Provenance.estimate`, which cannot exist without
+stated assumptions. And a test walks `atlas.analysis` and fails if any module
+there imports `fie_ai`, so the boundary cannot erode one convenient import at a
+time.
+
+**Degradation is scoped.** MarketMind being unreachable costs a report its
+company context and nothing else — the figures were computed and verified
+without it. Identity is the exception: Atlas does not fall back to matching on
+name, because duplicating resolution is how two products end up disagreeing
+about who a company is.
+
 ## Observability
 
 Every log line, span, and published event carries the same correlation id, so
@@ -230,11 +277,14 @@ without its credentials being able to reach a real deployment.
 
 ## Phase sequencing
 
-Phases 1 and 2 are complete. Phases 3–9 follow in order, each gated on the
+Phases 1 to 3 are complete. Phases 4–9 follow in order, each gated on the
 previous phase's tests passing. The order is not arbitrary: MarketMind came
 second because the knowledge graph is the shared intelligence layer that Atlas,
 Sentinel, and Venture all read from, and building those first would have meant
-building it three times.
+building it three times. Atlas came third for the same reason one level up — its
+money primitives, provenance-bound metrics, valuation machinery, and numeric
+grounding are what CFO.ai and Venture both need, and a budget narrative has
+exactly the same failure mode as a research note.
 
 Each app owns its own `pyproject.toml`, Alembic history with a namespaced
 version table, Dockerfile, and test suites. Sharing one migration history across

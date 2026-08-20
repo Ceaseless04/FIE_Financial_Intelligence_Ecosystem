@@ -15,8 +15,8 @@ from collections.abc import AsyncIterator
 from typing import Any
 
 import pytest
-from conftest import make_json_response, make_router
 from fixtures.documents import acme_10k, acme_news, northwind_10k
+from marketmind_fixtures import make_json_response, make_router
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 

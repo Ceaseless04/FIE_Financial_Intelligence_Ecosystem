@@ -1,0 +1,28 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "atlas"
+version = "0.1.0"
+description = "Atlas — autonomous financial intelligence: filings, valuation, and cited research"
+requires-python = ">=3.11"
+dependencies = [
+    "fie-common",
+    "fie-observability",
+    "fie-schemas",
+    "fie-ai",
+    "fie-auth",
+    "fie-database",
+    "fie-events",
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "alembic>=1.13",
+    "httpx>=0.27",
+]
+
+[project.optional-dependencies]
+dev = ["fie-testing"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/atlas"]

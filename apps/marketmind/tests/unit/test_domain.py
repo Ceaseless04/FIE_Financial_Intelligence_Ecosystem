@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import date
 
 import pytest
-from conftest import make_entity, make_source
+from marketmind_fixtures import make_entity, make_source
 from pydantic import ValidationError as PydanticValidationError
 
 from fie_schemas.provenance import Provenance

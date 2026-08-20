@@ -45,7 +45,7 @@ jobs:
           pip install --no-deps -e packages/common -e packages/observability \
             -e packages/schemas -e packages/ai -e packages/auth \
             -e packages/database -e packages/events -e packages/testing \
-            -e apps/marketmind
+            -e apps/marketmind -e apps/atlas
 
       - name: Lint
         run: ruff check .
@@ -120,7 +120,7 @@ jobs:
           pip install --no-deps -e packages/common -e packages/observability \
             -e packages/schemas -e packages/ai -e packages/auth \
             -e packages/database -e packages/events -e packages/testing \
-            -e apps/marketmind
+            -e apps/marketmind -e apps/atlas
 
       - name: Unit tests
         run: pytest packages apps -m unit -q --junitxml=junit-unit.xml
@@ -131,11 +131,22 @@ jobs:
       - name: API contract tests
         run: pytest apps -m api -q --junitxml=junit-api.xml
 
-      - name: Database migrations apply cleanly
+      - name: MarketMind migrations apply cleanly
         # A migration that only ever runs via metadata.create_all in tests is a
         # migration nobody has actually executed. `check` additionally fails when
         # the models have drifted from the migration history.
         working-directory: apps/marketmind
+        run: |
+          alembic upgrade head
+          alembic downgrade base
+          alembic upgrade head
+          alembic check
+
+      - name: Atlas migrations apply cleanly
+        # Run after MarketMind's so both histories coexist in one database —
+        # which is the arrangement the namespaced version tables exist for, and
+        # the one a shared alembic_version table would break.
+        working-directory: apps/atlas
         run: |
           alembic upgrade head
           alembic downgrade base
@@ -166,6 +177,11 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Full history, because the secret scan below examines every commit
+          # and not just the checked-out tree. A credential that was committed
+          # and removed in a later commit is still a credential that leaked.
+          fetch-depth: 0
 
       - uses: actions/setup-python@v5
         with:
@@ -186,9 +202,31 @@ jobs:
         run: bandit -r packages apps -ll -x "*/tests/*"
 
       - name: Secret scan
-        uses: gitleaks/gitleaks-action@v2
+        # The gitleaks binary directly, rather than gitleaks/gitleaks-action.
+        # The action wraps a single static binary in a license check and a
+        # network call to a third-party endpoint, and it failed this repository
+        # without attributing the failure to any finding — scanning the same
+        # tree and the same history locally, with both the version the action
+        # bundles and the current one, reports no leaks.
+        #
+        # Pinned by version *and* checksum: a security gate that silently
+        # executes whatever a release URL happens to serve today is the same
+        # class of problem it exists to catch.
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_VERSION: "8.30.1"
+          GITLEAKS_SHA256: "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb"
+        run: |
+          set -euo pipefail
+          archive="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          curl -sSfL -o "$archive"             "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/${archive}"
+          echo "${GITLEAKS_SHA256}  ${archive}" | sha256sum --check --status
+          tar -xzf "$archive" gitleaks
+          chmod +x gitleaks
+
+          # Every commit first, then the working tree. `--redact` keeps a real
+          # finding out of the build log, where it would leak a second time.
+          ./gitleaks git . --no-banner --redact
+          ./gitleaks dir . --no-banner --redact
 
   docker:
     name: Container build and scan
@@ -211,8 +249,15 @@ jobs:
           FIE_AUTH_JWT_SECRET=ci-validation-jwt-secret-value-32ch \
           FIE_CLAUDE_API_KEY=sk-ant-ci-validation \
           MARKETMIND_EMBEDDING_BASE_URL=http://embeddings.internal:8000 \
+          ATLAS_MARKETMIND_TOKEN=ci-validation-service-token \
             docker compose -f docker-compose.prod.yml config --quiet
 
+      # No `cache-from/to: type=gha`. GitHub retired the Actions cache API these
+      # builds were written against, and the export failed the whole job — a
+      # build-time optimisation taking the security gate down with it. The three
+      # images take a couple of minutes each from cold, which is the right price
+      # for a stage that has to be trustworthy. A registry-backed cache is the
+      # option worth revisiting, once there is a registry to push to.
       - name: Build platform image
         uses: docker/build-push-action@v6
         with:
@@ -221,8 +266,6 @@ jobs:
           push: false
           load: true
           tags: fie/platform:ci
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
 
       - name: Build MarketMind image
         uses: docker/build-push-action@v6
@@ -232,11 +275,20 @@ jobs:
           push: false
           load: true
           tags: fie/marketmind:ci
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+
+      - name: Build Atlas image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: infrastructure/docker/Dockerfile.atlas
+          push: false
+          load: true
+          tags: fie/atlas:ci
 
       - name: Scan images for vulnerabilities
-        uses: aquasecurity/trivy-action@0.28.0
+        # The tag is v-prefixed. `@0.28.0` does not resolve, which failed the
+        # job before a single step ran — action references are resolved upfront.
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: fie/platform:ci
           format: table
@@ -245,9 +297,22 @@ jobs:
           ignore-unfixed: true
 
       - name: Scan MarketMind image for vulnerabilities
-        uses: aquasecurity/trivy-action@0.28.0
+        # The tag is v-prefixed. `@0.28.0` does not resolve, which failed the
+        # job before a single step ran — action references are resolved upfront.
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: fie/marketmind:ci
+          format: table
+          exit-code: "1"
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+
+      - name: Scan Atlas image for vulnerabilities
+        # The tag is v-prefixed. `@0.28.0` does not resolve, which failed the
+        # job before a single step ran — action references are resolved upfront.
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: fie/atlas:ci
           format: table
           exit-code: "1"
           severity: CRITICAL,HIGH
