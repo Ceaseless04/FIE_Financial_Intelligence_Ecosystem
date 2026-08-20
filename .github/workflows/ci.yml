@@ -252,6 +252,12 @@ jobs:
           ATLAS_MARKETMIND_TOKEN=ci-validation-service-token \
             docker compose -f docker-compose.prod.yml config --quiet
 
+      # No `cache-from/to: type=gha`. GitHub retired the Actions cache API these
+      # builds were written against, and the export failed the whole job — a
+      # build-time optimisation taking the security gate down with it. The three
+      # images take a couple of minutes each from cold, which is the right price
+      # for a stage that has to be trustworthy. A registry-backed cache is the
+      # option worth revisiting, once there is a registry to push to.
       - name: Build platform image
         uses: docker/build-push-action@v6
         with:
@@ -260,8 +266,6 @@ jobs:
           push: false
           load: true
           tags: fie/platform:ci
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
 
       - name: Build MarketMind image
         uses: docker/build-push-action@v6
@@ -271,8 +275,6 @@ jobs:
           push: false
           load: true
           tags: fie/marketmind:ci
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
 
       - name: Build Atlas image
         uses: docker/build-push-action@v6
@@ -282,8 +284,6 @@ jobs:
           push: false
           load: true
           tags: fie/atlas:ci
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
 
       - name: Scan images for vulnerabilities
         # The tag is v-prefixed. `@0.28.0` does not resolve, which failed the
