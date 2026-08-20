@@ -19,10 +19,10 @@ from atlas.api.dependencies import (
     require_permission,
 )
 from atlas.api.schemas import AnalysisResponse, ValuationRequest, ValuationResponse
-from atlas.domain.money import Rate, to_decimal
-from atlas.domain.periods import PeriodKind
 from atlas.research.pipeline import ValuationInputs
 from fie_common.errors import NotFoundError, ValidationError
+from fie_finance.money import Rate, to_decimal
+from fie_finance.periods import PeriodKind
 
 router = APIRouter(prefix="/api/v1", tags=["analysis"])
 

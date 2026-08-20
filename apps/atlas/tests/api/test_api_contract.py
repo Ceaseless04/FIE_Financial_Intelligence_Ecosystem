@@ -35,7 +35,6 @@ from atlas.api.dependencies import (
     get_session,
 )
 from atlas.config import AtlasSettings
-from atlas.domain.periods import PeriodKind
 from atlas.filings.models import Filing
 from atlas.filings.pipeline import IngestionResult
 from atlas.research.pipeline import ReportOutcome
@@ -43,6 +42,7 @@ from atlas.research.reports import ReportSection, ResearchReport
 from fie_auth import AuthSettings, Principal, Role, TokenType, create_token
 from fie_common.config import CoreSettings
 from fie_common.errors import NotFoundError
+from fie_finance.periods import PeriodKind
 from fie_schemas.health import ComponentHealth, HealthStatus
 from fie_schemas.provenance import Provenance
 
@@ -169,7 +169,7 @@ class StubResearch:
     def value(self, entity_id: str, statements: Any, inputs: Any) -> Any:
         from atlas.analysis.dcf import DCFAssumptions, DCFModel
         from atlas.analysis.growth import free_cash_flow
-        from atlas.domain.money import Money
+        from fie_finance.money import Money
 
         if self.valuation == "unavailable":
             return None

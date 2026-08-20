@@ -36,9 +36,9 @@ from atlas.analysis.growth import (
     revenue_growth,
 )
 from atlas.analysis.results import Unit
-from atlas.domain.money import Money, Rate, Shares
-from atlas.domain.periods import FiscalPeriod
 from fie_common.errors import ValidationError
+from fie_finance.money import Money, Rate, Shares
+from fie_finance.periods import FiscalPeriod
 from fie_schemas.provenance import AssertionKind
 
 pytestmark = pytest.mark.unit

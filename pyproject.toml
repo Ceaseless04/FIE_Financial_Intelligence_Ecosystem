@@ -60,8 +60,8 @@ ignore = [
 [tool.ruff.lint.isort]
 known-first-party = [
     "fie_common", "fie_observability", "fie_schemas", "fie_ai",
-    "fie_auth", "fie_database", "fie_events", "fie_testing",
-    "marketmind", "atlas",
+    "fie_auth", "fie_database", "fie_events", "fie_finance", "fie_testing",
+    "marketmind", "atlas", "cfo_ai",
 ]
 
 # ---------------------------------------------------------------------------
@@ -86,6 +86,7 @@ files = [
     "packages/auth/src",
     "packages/database/src",
     "packages/events/src",
+    "packages/finance/src",
     "packages/testing/src",
     "apps/marketmind/src",
     "apps/atlas/src",
@@ -93,7 +94,7 @@ files = [
 mypy_path = [
     "packages/common/src", "packages/observability/src", "packages/schemas/src",
     "packages/ai/src", "packages/auth/src", "packages/database/src",
-    "packages/events/src", "packages/testing/src",
+    "packages/events/src", "packages/finance/src", "packages/testing/src",
     "apps/marketmind/src",
     "apps/atlas/src",
 ]
@@ -147,7 +148,7 @@ branch = true
 source = [
     "packages/common/src", "packages/observability/src", "packages/schemas/src",
     "packages/ai/src", "packages/auth/src", "packages/database/src",
-    "packages/events/src",
+    "packages/events/src", "packages/finance/src",
     "apps/marketmind/src",
     "apps/atlas/src",
 ]

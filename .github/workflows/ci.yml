@@ -44,7 +44,8 @@ jobs:
           pip install -r requirements-dev.txt
           pip install --no-deps -e packages/common -e packages/observability \
             -e packages/schemas -e packages/ai -e packages/auth \
-            -e packages/database -e packages/events -e packages/testing \
+            -e packages/database -e packages/events -e packages/finance \
+            -e packages/testing \
             -e apps/marketmind -e apps/atlas
 
       - name: Lint
@@ -119,7 +120,8 @@ jobs:
           pip install -r requirements-dev.txt
           pip install --no-deps -e packages/common -e packages/observability \
             -e packages/schemas -e packages/ai -e packages/auth \
-            -e packages/database -e packages/events -e packages/testing \
+            -e packages/database -e packages/events -e packages/finance \
+            -e packages/testing \
             -e apps/marketmind -e apps/atlas
 
       - name: Unit tests

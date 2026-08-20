@@ -5,7 +5,7 @@ Two decisions here carry the whole phase's Decimal discipline into the database.
 **Money is ``NUMERIC``, never ``float`` and never a JSON number.** PostgreSQL's
 ``NUMERIC`` is arbitrary-precision decimal and SQLAlchemy round-trips it to
 :class:`~decimal.Decimal` exactly. ``DOUBLE PRECISION`` would silently reintroduce
-the binary-float error that :mod:`atlas.domain.money` refuses at construction —
+the binary-float error that :mod:`fie_finance.money` refuses at construction —
 storing a validated Decimal into a float column and reading it back is a lossy
 conversion no amount of care further up the stack can undo.
 

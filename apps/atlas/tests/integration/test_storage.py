@@ -25,8 +25,6 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from atlas.analysis.ratios import analyze
-from atlas.domain.money import Money
-from atlas.domain.periods import FiscalPeriod, PeriodKind
 from atlas.domain.statements import FinancialStatements
 from atlas.research.reports import ReportSection, ResearchReport
 from atlas.storage.models import (
@@ -41,6 +39,8 @@ from atlas.storage.models import (
 from atlas.storage.repository import FilingRepository, ReportRepository, StatementRepository
 from fie_database.config import PostgresSettings
 from fie_database.postgres import PostgresDatabase
+from fie_finance.money import Money
+from fie_finance.periods import FiscalPeriod, PeriodKind
 from fie_schemas.provenance import Provenance
 from fie_testing import postgres_endpoint, require_service
 

@@ -8,8 +8,8 @@ from typing import Any
 
 from pydantic import Field, field_validator
 
-from atlas.domain.periods import FiscalPeriod
 from fie_common.utils import content_hash, new_id, utc_now
+from fie_finance.periods import FiscalPeriod
 from fie_schemas.base import FIEModel
 from fie_schemas.provenance import SourceLocator, SourceReference, SourceType
 

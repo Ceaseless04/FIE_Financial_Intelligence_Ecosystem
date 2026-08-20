@@ -72,6 +72,8 @@ packages/
   auth/                  JWT authentication, RBAC authorization
   database/              PostgreSQL, Redis, Neo4j infrastructure
   events/                Domain events, Redis Streams bus, idempotency, DLQ
+  finance/               Currency-safe decimal Money and fiscal periods —
+                         value primitives, no financial semantics
   testing/               Shared fakes, factories, assertions, infra probes
 infrastructure/          Dockerfiles, OTel collector configs, Terraform (Phase 9)
 docs/                    Architecture and per-phase records
@@ -82,9 +84,18 @@ Each app owns its own `pyproject.toml`, migration history (with a namespaced
 Alembic version table), Dockerfile, and test suites, so it can be built, tested,
 and deployed without the others.
 
-Shared packages provide infrastructure only. **No financial domain logic lives
-in `packages/`** — that boundary is what keeps the six products independently
-testable and deployable.
+Shared packages provide infrastructure and value primitives. **No financial
+domain logic lives in `packages/`** — that boundary is what keeps the six
+products independently testable and deployable.
+
+The line runs between *what a number is* and *what a number means*.
+`packages/finance` holds `Money`, which refuses a float and refuses to add two
+currencies, and `FiscalPeriod`, which knows a quarter is not a year — the same
+category as `fie_schemas.provenance`, a mechanism rather than a judgement.
+Valuation, accounting identities, budgeting, variance rules, and risk scoring
+live in the application that owns them. The alternative was a private copy of
+`Money` in each product: four by Phase 7, and a rounding fix in one reaching
+none of the others.
 
 ## Getting started
 

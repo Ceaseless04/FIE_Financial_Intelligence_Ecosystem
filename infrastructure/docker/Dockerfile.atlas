@@ -38,6 +38,7 @@ COPY pyproject.toml ./
 RUN /opt/venv/bin/pip install --no-deps \
     ./packages/common ./packages/observability ./packages/schemas \
     ./packages/ai ./packages/auth ./packages/database ./packages/events \
+    ./packages/finance \
     ./apps/atlas
 
 # Packaging tooling is a build-time need. Left in place it is the single

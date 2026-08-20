@@ -15,8 +15,8 @@ from __future__ import annotations
 from decimal import Decimal
 
 from atlas.analysis.results import AnalysisResult, Metric, Unit, derived, unavailable
-from atlas.domain.money import Money
 from atlas.domain.statements import BalanceSheet, FinancialStatements, IncomeStatement
+from fie_finance.money import Money
 from fie_schemas.provenance import SourceReference
 
 _VERSION = "v1"

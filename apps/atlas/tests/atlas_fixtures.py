@@ -15,8 +15,6 @@ from collections.abc import Sequence
 from datetime import date
 from typing import Any
 
-from atlas.domain.money import Money, Shares
-from atlas.domain.periods import FiscalPeriod
 from atlas.domain.statements import (
     BalanceSheet,
     CashFlowStatement,
@@ -26,6 +24,8 @@ from atlas.domain.statements import (
 from atlas.filings.models import Filing, FilingType
 from fie_ai.contracts import CompletionResponse, StopReason, TokenUsage
 from fie_ai.registry import AIRouter, ProviderRegistry
+from fie_finance.money import Money, Shares
+from fie_finance.periods import FiscalPeriod
 from fie_schemas.provenance import Provenance, SourceReference, SourceType
 from fie_testing import FakeAIProvider
 

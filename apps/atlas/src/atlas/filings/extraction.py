@@ -30,8 +30,6 @@ from enum import StrEnum
 from pydantic import Field
 from pydantic import ValidationError as PydanticValidationError
 
-from atlas.domain.money import Money, Shares, to_decimal
-from atlas.domain.periods import FiscalPeriod
 from atlas.domain.statements import (
     BalanceSheet,
     CashFlowStatement,
@@ -42,6 +40,8 @@ from atlas.filings.models import Filing
 from fie_ai import AIRouter, CompletionRequest, Effort, Message, Role
 from fie_ai.structured import parse_structured, structured_request
 from fie_common.errors import AIProviderResponseError
+from fie_finance.money import Money, Shares, to_decimal
+from fie_finance.periods import FiscalPeriod
 from fie_observability.logging import get_logger
 from fie_schemas.base import FIEModel
 from fie_schemas.provenance import Provenance

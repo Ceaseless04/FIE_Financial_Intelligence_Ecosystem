@@ -24,8 +24,8 @@ from typing import Any
 
 from pydantic import Field, field_validator
 
-from atlas.domain.money import Money, decimal_field, to_decimal
 from fie_common.errors import ValidationError
+from fie_finance.money import Money, decimal_field, to_decimal
 from fie_schemas.base import FrozenModel
 from fie_schemas.provenance import Provenance, SourceReference
 

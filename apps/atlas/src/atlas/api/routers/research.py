@@ -19,9 +19,9 @@ from atlas.api.dependencies import (
     require_permission,
 )
 from atlas.api.schemas import ReportRequestBody, ReportResponse
-from atlas.domain.money import Rate, to_decimal
 from atlas.research.pipeline import ValuationInputs
 from fie_common.errors import NotFoundError
+from fie_finance.money import Rate, to_decimal
 
 router = APIRouter(prefix="/api/v1/research", tags=["research"])
 

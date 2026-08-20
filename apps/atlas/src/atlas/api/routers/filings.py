@@ -17,8 +17,8 @@ from atlas.api.schemas import (
     IngestFilingResponse,
     StatementSetView,
 )
-from atlas.domain.periods import PeriodKind
 from fie_common.errors import NotFoundError
+from fie_finance.periods import PeriodKind
 
 router = APIRouter(prefix="/api/v1", tags=["filings"])
 

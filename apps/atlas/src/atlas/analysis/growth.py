@@ -14,9 +14,9 @@ from decimal import ROUND_HALF_UP, Decimal
 from itertools import pairwise
 
 from atlas.analysis.results import Metric, Unit, derived, unavailable
-from atlas.domain.money import Money
-from atlas.domain.periods import FiscalPeriod
 from atlas.domain.statements import FinancialStatements
+from fie_finance.money import Money
+from fie_finance.periods import FiscalPeriod
 
 _VERSION = "v1"
 _PRECISION = Decimal("0.000001")

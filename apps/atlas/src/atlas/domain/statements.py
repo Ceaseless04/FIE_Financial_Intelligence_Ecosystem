@@ -18,8 +18,8 @@ from decimal import Decimal
 
 from pydantic import Field, model_validator
 
-from atlas.domain.money import Money, Shares
-from atlas.domain.periods import FiscalPeriod, PeriodKind
+from fie_finance.money import Money, Shares
+from fie_finance.periods import FiscalPeriod, PeriodKind
 from fie_schemas.base import FrozenModel
 from fie_schemas.provenance import Provenance, SourceReference
 

@@ -18,7 +18,6 @@ from atlas_fixtures import extraction_payload, filing, make_json_response, make_
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from atlas.domain.money import Rate
 from atlas.events import (
     ANALYSIS_COMPLETED,
     FILING_DUPLICATE,
@@ -45,6 +44,7 @@ from atlas.storage.models import (
 from atlas.storage.repository import FilingRepository, ReportRepository, StatementRepository
 from fie_common.errors import NotFoundError
 from fie_events.bus import InMemoryEventBus
+from fie_finance.money import Rate
 from fie_testing import postgres_endpoint, require_service
 
 pytestmark = pytest.mark.integration

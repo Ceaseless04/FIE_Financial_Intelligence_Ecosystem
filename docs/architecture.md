@@ -26,15 +26,33 @@ apps/   │  Atlas   CFO.ai   MarketMind   Sentinel   ...     │  domain logic
                                 │ depends on
         ┌───────────────────────▼──────────────────────────┐
 packages│  ai   auth   database   events   observability    │  infrastructure
-        │  schemas   common   testing                      │  (no domain logic)
+        │  schemas   common   testing   finance            │  + value primitives
         └──────────────────────────────────────────────────┘
 ```
 
 The dependency arrow points one way. A shared package must never import from an
-app, and must never contain financial semantics — no money types, no ratios, no
-risk models. That boundary is what keeps six products independently testable and
+app. That boundary is what keeps six products independently testable and
 deployable out of one repository. Phase 1 has no domain logic at all, by
 constraint.
+
+**The boundary was redrawn once, in Phase 4, and it is worth recording where.**
+It originally read "no money types" — and `Money` lived inside Atlas. When
+CFO.ai needed it, the choice was a second copy or a shared one, and by Phase 7
+it would have been four copies with a rounding fix in one reaching none of the
+others. That is the same "two products quietly disagree" failure the rest of
+this architecture exists to prevent.
+
+So the line now runs between **what a number is** and **what a number means**.
+`packages/finance` holds `Money`, which refuses a float at construction and
+refuses to add two currencies, and `FiscalPeriod`, which knows a quarter is not
+comparable to a year. Neither encodes a financial judgement; they are the same
+category as `fie_schemas.provenance`, which is an attribution mechanism rather
+than domain logic and was always shared for the same reason.
+
+What stays in the applications is unchanged and is the part that matters:
+valuation and accounting identities in Atlas, budgeting and variance rules in
+CFO.ai, risk scoring in Sentinel. A shared package still contains no ratios, no
+valuation, and no risk models.
 
 The boundary runs the other way too. MarketMind stores knowledge, not judgement:
 its `Entity` model rejects attributes like `rating` or `price_target` outright,
@@ -54,11 +72,14 @@ common ──────────────┐
    ├── database ─────┤
    │       ▲         │
    │       └── events┤
+   ├── finance ──────┤
    └────────── testing (depends on all; test-only)
 ```
 
 No cycles. `fie_events` depends on `fie_database` because Redis Streams is the
-transport; swapping transports would touch one package.
+transport; swapping transports would touch one package. `fie_finance` depends
+only on `common` and `schemas` — it is leaf-level on purpose, so a product can
+take the money primitives without inheriting a database driver or an AI client.
 
 ## AI provider abstraction
 

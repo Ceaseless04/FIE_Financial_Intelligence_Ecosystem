@@ -7,7 +7,7 @@ somewhere in the middle; writing each conversion out means every place a
 
 Reading is where the care matters most. A row's ``NUMERIC`` comes back as a
 :class:`~decimal.Decimal`, and it is handed straight to
-:class:`~atlas.domain.money.Money`, which would reject anything else. So the
+:class:`~fie_finance.money.Money`, which would reject anything else. So the
 statements rebuilt here are re-validated against the accounting identities on
 construction — a row that was corrupted in the database fails to load rather
 than flowing into an analysis.
@@ -26,8 +26,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from atlas.analysis.results import Metric
-from atlas.domain.money import Money, Shares
-from atlas.domain.periods import FiscalPeriod, PeriodKind, period_key
 from atlas.domain.statements import (
     BalanceSheet,
     CashFlowStatement,
@@ -44,6 +42,8 @@ from atlas.storage.models import (
     ResearchReportRow,
     StatementSetRow,
 )
+from fie_finance.money import Money, Shares
+from fie_finance.periods import FiscalPeriod, PeriodKind, period_key
 from fie_observability.logging import get_logger
 from fie_schemas.provenance import Provenance
 

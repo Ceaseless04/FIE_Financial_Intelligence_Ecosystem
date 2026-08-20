@@ -15,6 +15,7 @@ dependencies = [
     "fie-auth",
     "fie-database",
     "fie-events",
+    "fie-finance",
     "fastapi>=0.115",
     "uvicorn[standard]>=0.30",
     "alembic>=1.13",

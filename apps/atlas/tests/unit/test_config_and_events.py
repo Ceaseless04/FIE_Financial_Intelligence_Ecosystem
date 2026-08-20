@@ -7,13 +7,11 @@ event types are asserted here because five other products will subscribe to them
 
 from __future__ import annotations
 
-from datetime import date
 from decimal import Decimal
 
 import pytest
 
 from atlas.config import AtlasSettings
-from atlas.domain.periods import FiscalPeriod, PeriodKind, period_key
 from atlas.events import (
     PUBLISHED_EVENT_TYPES,
     REPORT_PUBLISHED,
@@ -59,22 +57,6 @@ class TestSettings:
     def test_disabling_marketmind_removes_its_requirements(self) -> None:
         settings = AtlasSettings(marketmind_enabled=False)
         settings.validate_for(Environment.PRODUCTION)
-
-
-class TestPeriodKey:
-    def test_an_annual_period_carries_an_explicit_zero(self) -> None:
-        """NULL would not conflict with NULL in a unique constraint."""
-        assert FiscalPeriod.annual(2025, date(2025, 12, 31)).key == "annual:2025:0"
-
-    def test_a_quarter_is_distinct_from_its_year(self) -> None:
-        annual = FiscalPeriod.annual(2025, date(2025, 12, 31))
-        quarter = FiscalPeriod.quarterly(2025, 4, date(2025, 12, 31))
-        assert annual.key != quarter.key
-
-    def test_lookup_by_parts_matches_lookup_by_object(self) -> None:
-        """One definition, so a query and a write cannot disagree about a row."""
-        period = FiscalPeriod.quarterly(2025, 3, date(2025, 9, 30))
-        assert period_key(PeriodKind.QUARTERLY, 2025, 3) == period.key
 
 
 class TestEventContract:
