@@ -10,6 +10,9 @@ valuation, no accounting, no budgeting — nothing that encodes what a number
 - :class:`FiscalPeriod`, which knows a quarter is not comparable to a year,
   because that comparison is the most common way an analysis produces a
   confidently wrong growth rate.
+- :func:`check_numeric_grounding`, which verifies that a figure written in
+  prose is one somebody actually computed. Rounding is permitted; invention is
+  not.
 - :class:`Metric`, a computed figure bound to how it was produced. Built through
   :func:`derived`, it *cannot* be attributed to a language model — the shared
   provenance validator refuses it, so the object does not construct. That is the
@@ -29,6 +32,13 @@ reaching none of the others — which is precisely the "two products quietly
 disagree" failure the rest of the architecture is built to prevent.
 """
 
+from fie_finance.grounding import (
+    NumericGroundingReport,
+    NumericKind,
+    allowed_values_from,
+    check_numeric_grounding,
+    extract_numeric_claims,
+)
 from fie_finance.metrics import (
     AnalysisResult,
     Metric,
@@ -54,13 +64,18 @@ __all__ = [
     "FiscalPeriod",
     "Metric",
     "Money",
+    "NumericGroundingReport",
+    "NumericKind",
     "PeriodKind",
     "Rate",
     "Shares",
     "Unit",
+    "allowed_values_from",
+    "check_numeric_grounding",
     "decimal_field",
     "derived",
     "estimated",
+    "extract_numeric_claims",
     "period_key",
     "sum_money",
     "to_decimal",

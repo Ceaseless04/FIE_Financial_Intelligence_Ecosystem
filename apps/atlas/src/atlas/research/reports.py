@@ -28,14 +28,14 @@ from pydantic import Field
 
 from atlas.analysis.dcf import DCFValuation
 from atlas.domain.statements import FinancialStatements
-from atlas.research.grounding import (
+from fie_ai import AIRouter, CompletionRequest, Effort, Message, Role
+from fie_ai.structured import check_grounding, parse_structured, structured_request
+from fie_common.errors import AIProviderResponseError, ValidationError
+from fie_finance.grounding import (
     NumericGroundingReport,
     allowed_values_from,
     check_numeric_grounding,
 )
-from fie_ai import AIRouter, CompletionRequest, Effort, Message, Role
-from fie_ai.structured import check_grounding, parse_structured, structured_request
-from fie_common.errors import AIProviderResponseError, ValidationError
 from fie_finance.metrics import AnalysisResult, Metric
 from fie_observability.logging import get_logger
 from fie_observability.tracing import traced
