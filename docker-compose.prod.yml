@@ -193,6 +193,31 @@ services:
       marketmind:
         condition: service_started
 
+  cfo-ai:
+    <<: *service-defaults
+    build:
+      context: .
+      dockerfile: infrastructure/docker/Dockerfile.cfo-ai
+    image: ${FIE_CFO_IMAGE:-fie/cfo-ai:latest}
+    environment:
+      <<: *common-env
+      FIE_SERVICE_NAME: cfo-ai
+      FIE_POSTGRES_HOST: postgres
+      FIE_POSTGRES_USER: ${FIE_POSTGRES_USER:?required}
+      FIE_POSTGRES_PASSWORD: ${FIE_POSTGRES_PASSWORD:?required}
+      FIE_POSTGRES_DATABASE: ${FIE_POSTGRES_DATABASE:?required}
+      FIE_REDIS_HOST: redis
+      FIE_REDIS_PASSWORD: ${FIE_REDIS_PASSWORD:?required}
+      FIE_AUTH_JWT_SECRET: ${FIE_AUTH_JWT_SECRET:?required}
+      FIE_CLAUDE_API_KEY: ${FIE_CLAUDE_API_KEY:?required}
+    expose:
+      - "8003"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
   # TLS termination and rate limiting in front of every application service.
   gateway:
     <<: *service-defaults

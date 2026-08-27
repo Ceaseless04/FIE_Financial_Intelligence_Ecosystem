@@ -46,7 +46,7 @@ jobs:
             -e packages/schemas -e packages/ai -e packages/auth \
             -e packages/database -e packages/events -e packages/finance \
             -e packages/testing \
-            -e apps/marketmind -e apps/atlas
+            -e apps/marketmind -e apps/atlas -e apps/cfo-ai
 
       - name: Lint
         run: ruff check .
@@ -122,7 +122,7 @@ jobs:
             -e packages/schemas -e packages/ai -e packages/auth \
             -e packages/database -e packages/events -e packages/finance \
             -e packages/testing \
-            -e apps/marketmind -e apps/atlas
+            -e apps/marketmind -e apps/atlas -e apps/cfo-ai
 
       - name: Unit tests
         run: pytest packages apps -m unit -q --junitxml=junit-unit.xml
@@ -149,6 +149,16 @@ jobs:
         # which is the arrangement the namespaced version tables exist for, and
         # the one a shared alembic_version table would break.
         working-directory: apps/atlas
+        run: |
+          alembic upgrade head
+          alembic downgrade base
+          alembic upgrade head
+          alembic check
+
+      - name: CFO.ai migrations apply cleanly
+        # Third history in the same database. Each app owns its own version
+        # table, so none of them can propose dropping another's tables.
+        working-directory: apps/cfo-ai
         run: |
           alembic upgrade head
           alembic downgrade base
@@ -287,6 +297,15 @@ jobs:
           load: true
           tags: fie/atlas:ci
 
+      - name: Build CFO.ai image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: infrastructure/docker/Dockerfile.cfo-ai
+          push: false
+          load: true
+          tags: fie/cfo-ai:ci
+
       - name: Scan images for vulnerabilities
         # The tag is v-prefixed. `@0.28.0` does not resolve, which failed the
         # job before a single step ran — action references are resolved upfront.
@@ -315,6 +334,15 @@ jobs:
         uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: fie/atlas:ci
+          format: table
+          exit-code: "1"
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+
+      - name: Scan CFO.ai image for vulnerabilities
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: fie/cfo-ai:ci
           format: table
           exit-code: "1"
           severity: CRITICAL,HIGH

@@ -169,6 +169,31 @@ services:
       ollama:
         condition: service_started
 
+  # Optional: run CFO.ai in a container instead of on the host.
+  #   docker compose -f docker-compose.dev.yml --profile apps up -d cfo-ai
+  cfo-ai:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/Dockerfile.cfo-ai
+    profiles: ["apps"]
+    environment:
+      FIE_ENVIRONMENT: development
+      FIE_LOG_LEVEL: DEBUG
+      FIE_JSON_LOGS: "false"
+      FIE_POSTGRES_HOST: postgres
+      FIE_POSTGRES_PASSWORD: fie-local-development
+      FIE_REDIS_HOST: redis
+      FIE_AI_DEFAULT_PROVIDER: ollama
+      FIE_AI_ENABLED_PROVIDERS: '["ollama"]'
+      FIE_OLLAMA_BASE_URL: http://ollama:11434
+    ports:
+      - "8003:8003"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      ollama:
+        condition: service_started
+
   # Optional: self-hosted inference for batch workloads. GPU required.
   #   docker compose -f docker-compose.dev.yml --profile vllm up -d vllm
   vllm:

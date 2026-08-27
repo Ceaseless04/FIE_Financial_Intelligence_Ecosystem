@@ -632,19 +632,38 @@ class TestErrorEnvelope:
 class TestOpenAPI:
     async def test_every_route_declares_authorization(self, client: httpx.AsyncClient) -> None:
         """An unprotected endpoint should be visible in the routing table rather
-        than hiding in a function body — so this asserts on the table."""
+        than hiding in a function body — so this asserts on the table.
+
+        The routes are flattened through the included-router wrappers first.
+        This version of FastAPI keeps an included router as a single wrapper
+        object in ``app.routes`` rather than splicing its routes in, so the
+        obvious loop over ``app.routes`` matches nothing: the earlier version of
+        this test examined zero endpoints and passed for a year of commits. The
+        count assertion below is what stops that happening again.
+        """
         from atlas.api.app import create_app as build
 
         app = build(configure_observability=False, container=StubContainer())  # type: ignore[arg-type]
-        unprotected = []
-        for route in app.routes:
-            path = getattr(route, "path", "")
-            if not path.startswith("/api/"):
-                continue
-            names = [d.dependency.__name__ for d in getattr(route, "dependencies", [])]
-            if "dependency" not in names:
-                unprotected.append(path)
 
+        routes: list = []
+        stack = list(app.routes)
+        while stack:
+            item = stack.pop()
+            inner = getattr(item, "original_router", None)
+            if inner is not None:
+                stack.extend(inner.routes)
+                continue
+            routes.append(item)
+
+        api_routes = [r for r in routes if getattr(r, "path", "").startswith("/api/")]
+        assert len(api_routes) >= 6, "the enumeration found too few routes to be meaningful"
+
+        unprotected = [
+            route.path
+            for route in api_routes
+            if "dependency"
+            not in [d.dependency.__name__ for d in getattr(route, "dependencies", [])]
+        ]
         assert unprotected == []
 
     async def test_filing_type_is_an_enum_in_the_schema(self, client: httpx.AsyncClient) -> None:

@@ -17,16 +17,17 @@ shared infrastructure layer.
 **Phase 1 — Shared Platform: complete.**
 **Phase 2 — MarketMind (knowledge graph): complete.**
 **Phase 3 — Atlas (financial research): complete.**
-Phases 4–9 are not started.
+**Phase 4 — CFO.ai (planning & analysis): complete.**
+Phases 5–9 are not started.
 
 The platform is built strictly sequentially. Each phase leaves the repository in
 a working state, and no phase begins while the previous phase's gates fail. See
-[docs/phases/phase-3.md](docs/phases/phase-3.md) for what Atlas delivered, the
-bugs the suite caught, and the Phase 4 entry criteria.
+[docs/phases/phase-4.md](docs/phases/phase-4.md) for what CFO.ai delivered, the
+bugs the suite caught, and the Phase 5 entry criteria.
 
 ```
-1138 passing (948 unit + 115 integration + 84 API) · 92.78% coverage (gate: 90%)
-ruff clean · mypy --strict clean · migrations verified up/down/up
+1333 passing (1092 unit + 125 integration + 116 API) · 92.24% coverage (gate: 90%)
+ruff clean · mypy --strict clean · three migration histories verified up/down/up
 ```
 
 Integration tests were run against live PostgreSQL (pgvector), Redis, Neo4j, and
@@ -63,7 +64,8 @@ Provenance(kind=AssertionKind.ESTIMATE)  # ValidationError
 apps/
   marketmind/            Knowledge graph: entities, relationships, GraphRAG
   atlas/                 Financial research: filings, analysis, valuation, reports
-                         (CFO.ai, Sentinel, Venture, FinOps: Phases 4-7)
+  cfo-ai/                Planning & analysis: budgets, variance, forecasts, scenarios
+                         (Sentinel, Venture, FinOps: Phases 5-7)
 packages/
   common/                Config, error hierarchy, retry/circuit-breaker/timeout
   observability/         Structured logging, OpenTelemetry tracing, metrics
@@ -116,11 +118,14 @@ python -m venv .venv && source .venv/bin/activate     # Windows: .venv\Scripts\a
 pip install -r requirements-dev.txt
 pip install --no-deps -e packages/common -e packages/observability \
   -e packages/schemas -e packages/ai -e packages/auth \
-  -e packages/database -e packages/events -e packages/testing \
-  -e apps/marketmind
+  -e packages/database -e packages/events -e packages/finance \
+  -e packages/testing \
+  -e apps/marketmind -e apps/atlas -e apps/cfo-ai
 
-# 4. Migrate
+# 4. Migrate — each app owns its own history and version table
 (cd apps/marketmind && alembic upgrade head)
+(cd apps/atlas && alembic upgrade head)
+(cd apps/cfo-ai && alembic upgrade head)
 
 # 5. Verify
 pytest -q
@@ -138,6 +143,9 @@ python -m marketmind             # host and port come from MARKETMIND_API_*
 
 python -m atlas                  # host and port come from ATLAS_API_*
 # http://localhost:8002/docs
+
+python -m cfo_ai                 # host and port come from CFO_API_*
+# http://localhost:8003/docs
 ```
 
 `requirements.txt` is the runtime dependency set that container images install;
@@ -201,6 +209,7 @@ Run it locally before pushing:
 ruff check . && ruff format --check . && mypy && pytest --cov
 (cd apps/marketmind && alembic upgrade head && alembic check)
 (cd apps/atlas && alembic upgrade head && alembic check)
+(cd apps/cfo-ai && alembic upgrade head && alembic check)
 ```
 
 ## Branching
@@ -220,6 +229,8 @@ pass every CI stage.
 
 - [docs/architecture.md](docs/architecture.md) — system design and boundaries
 - [docs/phases/phase-1.md](docs/phases/phase-1.md) — shared platform record
+- [docs/phases/phase-4.md](docs/phases/phase-4.md) — CFO.ai record: direction
+  grounding, and the checks that looked like they were working
 - [docs/phases/phase-3.md](docs/phases/phase-3.md) — Atlas record: numeric
   grounding, Decimal discipline end to end, and the bugs the suite caught
 - [docs/phases/phase-2.md](docs/phases/phase-2.md) — MarketMind record, the bugs

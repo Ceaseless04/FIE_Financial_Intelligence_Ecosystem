@@ -265,6 +265,27 @@ without it. Identity is the exception: Atlas does not fall back to matching on
 name, because duplicating resolution is how two products end up disagreeing
 about who a company is.
 
+## Planning and analysis (CFO.ai)
+
+CFO.ai works on a company's own management figures. Its full record is in
+[phases/phase-4.md](phases/phase-4.md); the architectural point is a single one.
+
+**A variance is a subtraction and a sentence, and the sentence is what goes
+wrong.** Revenue five percent under plan is bad; marketing five percent under
+plan is good. Identical arithmetic, opposite meanings, and only the account
+decides which. So favourability is derived from the account type inside the
+constructor and there is no parameter for a caller to supply — the wrong verdict
+is unrepresentable rather than merely discouraged. Headcount declines to have a
+verdict at all, because hiring behind plan is a saving to a CFO and a capacity
+problem to the director waiting for those people.
+
+That rule then propagates outward rather than being re-derived: the API returns
+each line's direction stated, bucketed, and written out in a sentence; the
+prompt tells the model the direction rather than leaving it to infer one; and
+**direction grounding** checks the prose back against it. That last check closes
+the gap Phase 3 recorded — numeric grounding verifies figures, not claims, and a
+sentence can carry only correct figures while reversing their meaning.
+
 ## Observability
 
 Every log line, span, and published event carries the same correlation id, so
@@ -298,7 +319,7 @@ without its credentials being able to reach a real deployment.
 
 ## Phase sequencing
 
-Phases 1 to 3 are complete. Phases 4–9 follow in order, each gated on the
+Phases 1 to 4 are complete. Phases 5–9 follow in order, each gated on the
 previous phase's tests passing. The order is not arbitrary: MarketMind came
 second because the knowledge graph is the shared intelligence layer that Atlas,
 Sentinel, and Venture all read from, and building those first would have meant
