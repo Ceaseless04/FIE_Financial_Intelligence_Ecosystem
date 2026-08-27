@@ -19,8 +19,8 @@ from decimal import ROUND_HALF_UP, Decimal
 
 from pydantic import Field
 
-from atlas.analysis.results import Metric, Unit, estimated
 from fie_common.errors import ValidationError
+from fie_finance.metrics import Metric, Unit, estimated
 from fie_finance.money import Money, Rate, Shares
 from fie_schemas.base import FrozenModel
 from fie_schemas.provenance import SourceReference

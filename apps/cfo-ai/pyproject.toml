@@ -1,0 +1,28 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "cfo-ai"
+version = "0.1.0"
+description = "CFO.ai — financial planning and analysis: budgets, variance, forecasting, scenarios"
+requires-python = ">=3.11"
+dependencies = [
+    "fie-common",
+    "fie-observability",
+    "fie-schemas",
+    "fie-ai",
+    "fie-auth",
+    "fie-database",
+    "fie-events",
+    "fie-finance",
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "alembic>=1.13",
+]
+
+[project.optional-dependencies]
+dev = ["fie-testing"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/cfo_ai"]

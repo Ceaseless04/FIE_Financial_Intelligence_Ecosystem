@@ -21,11 +21,11 @@ from typing import Any
 from pydantic import Field, field_validator, model_validator
 
 from atlas.analysis.dcf import DCFValuation
-from atlas.analysis.results import AnalysisResult, Metric
 from atlas.domain.statements import FinancialStatements, StatementBase
 from atlas.filings.models import Filing, FilingType
 from atlas.filings.pipeline import IngestionResult
 from atlas.research.reports import ResearchReport
+from fie_finance.metrics import AnalysisResult, Metric
 from fie_finance.money import Money, Shares, to_decimal
 from fie_finance.periods import FiscalPeriod, PeriodKind
 from fie_schemas.base import FIEModel, FrozenModel

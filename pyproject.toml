@@ -90,6 +90,7 @@ files = [
     "packages/testing/src",
     "apps/marketmind/src",
     "apps/atlas/src",
+    "apps/cfo-ai/src",
 ]
 mypy_path = [
     "packages/common/src", "packages/observability/src", "packages/schemas/src",
@@ -97,11 +98,13 @@ mypy_path = [
     "packages/events/src", "packages/finance/src", "packages/testing/src",
     "apps/marketmind/src",
     "apps/atlas/src",
+    "apps/cfo-ai/src",
 ]
 exclude = [
     "packages/database/migrations/",
     "apps/marketmind/migrations/",
     "apps/atlas/migrations/",
+    "apps/cfo-ai/migrations/",
     "build/",
     "dist/",
 ]
@@ -151,6 +154,7 @@ source = [
     "packages/events/src", "packages/finance/src",
     "apps/marketmind/src",
     "apps/atlas/src",
+    "apps/cfo-ai/src",
 ]
 omit = ["*/tests/*", "*/migrations/*", "*/__main__.py"]
 

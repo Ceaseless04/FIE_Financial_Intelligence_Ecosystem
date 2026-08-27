@@ -4,7 +4,7 @@ Pure functions over reported figures. No model call is reachable from this
 module, which is the point: a margin is arithmetic, and arithmetic delegated to
 a language model is arithmetic nobody can reproduce or defend.
 
-Every ratio returns a :class:`~atlas.analysis.results.Metric` carrying the
+Every ratio returns a :class:`~fie_finance.metrics.Metric` carrying the
 inputs it used, so a reviewer can recompute it by hand from the report itself.
 A ratio whose inputs the filing did not disclose comes back marked unavailable
 rather than as a zero that reads like a measurement.
@@ -14,8 +14,8 @@ from __future__ import annotations
 
 from decimal import Decimal
 
-from atlas.analysis.results import AnalysisResult, Metric, Unit, derived, unavailable
 from atlas.domain.statements import BalanceSheet, FinancialStatements, IncomeStatement
+from fie_finance.metrics import AnalysisResult, Metric, Unit, derived, unavailable
 from fie_finance.money import Money
 from fie_schemas.provenance import SourceReference
 

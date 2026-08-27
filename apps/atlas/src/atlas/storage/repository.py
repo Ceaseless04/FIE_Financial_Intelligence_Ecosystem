@@ -25,7 +25,6 @@ from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from atlas.analysis.results import Metric
 from atlas.domain.statements import (
     BalanceSheet,
     CashFlowStatement,
@@ -42,6 +41,7 @@ from atlas.storage.models import (
     ResearchReportRow,
     StatementSetRow,
 )
+from fie_finance.metrics import Metric
 from fie_finance.money import Money, Shares
 from fie_finance.periods import FiscalPeriod, PeriodKind, period_key
 from fie_observability.logging import get_logger

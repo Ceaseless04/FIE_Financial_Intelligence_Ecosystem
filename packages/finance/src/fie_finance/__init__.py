@@ -10,6 +10,11 @@ valuation, no accounting, no budgeting — nothing that encodes what a number
 - :class:`FiscalPeriod`, which knows a quarter is not comparable to a year,
   because that comparison is the most common way an analysis produces a
   confidently wrong growth rate.
+- :class:`Metric`, a computed figure bound to how it was produced. Built through
+  :func:`derived`, it *cannot* be attributed to a language model — the shared
+  provenance validator refuses it, so the object does not construct. That is the
+  mechanism every product in the ecosystem uses to keep calculation separate
+  from narration, and it holds no formula of its own.
 
 That distinction is the same one :mod:`fie_schemas.provenance` draws: it is an
 attribution *mechanism* rather than domain logic, and lives in the platform for
@@ -24,6 +29,14 @@ reaching none of the others — which is precisely the "two products quietly
 disagree" failure the rest of the architecture is built to prevent.
 """
 
+from fie_finance.metrics import (
+    AnalysisResult,
+    Metric,
+    Unit,
+    derived,
+    estimated,
+    unavailable,
+)
 from fie_finance.money import (
     CENTS,
     Money,
@@ -37,13 +50,19 @@ from fie_finance.periods import FiscalPeriod, PeriodKind, period_key
 
 __all__ = [
     "CENTS",
+    "AnalysisResult",
     "FiscalPeriod",
+    "Metric",
     "Money",
     "PeriodKind",
     "Rate",
     "Shares",
+    "Unit",
     "decimal_field",
+    "derived",
+    "estimated",
     "period_key",
     "sum_money",
     "to_decimal",
+    "unavailable",
 ]

@@ -35,8 +35,8 @@ from atlas.analysis.growth import (
     period_over_period_growth,
     revenue_growth,
 )
-from atlas.analysis.results import Unit
 from fie_common.errors import ValidationError
+from fie_finance.metrics import Unit
 from fie_finance.money import Money, Rate, Shares
 from fie_finance.periods import FiscalPeriod
 from fie_schemas.provenance import AssertionKind

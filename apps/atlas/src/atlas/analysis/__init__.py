@@ -26,7 +26,7 @@ from atlas.analysis.growth import (
     revenue_growth,
 )
 from atlas.analysis.ratios import analyze
-from atlas.analysis.results import AnalysisResult, Metric, Unit, derived, estimated, unavailable
+from fie_finance.metrics import AnalysisResult, Metric, Unit, derived, estimated, unavailable
 
 __all__ = [
     "AnalysisResult",

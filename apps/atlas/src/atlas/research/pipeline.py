@@ -23,7 +23,6 @@ from dataclasses import dataclass
 from atlas.analysis.dcf import DCFAssumptions, DCFModel, DCFValuation, project_cash_flows
 from atlas.analysis.growth import free_cash_flow
 from atlas.analysis.ratios import analyze
-from atlas.analysis.results import AnalysisResult
 from atlas.clients.marketmind import MarketMindClient
 from atlas.domain.statements import FinancialStatements
 from atlas.events import (
@@ -40,6 +39,7 @@ from atlas.research.reports import ReportRequest, ReportService, ResearchReport
 from atlas.storage.repository import ReportRepository, StatementRepository
 from fie_common.errors import NotFoundError, ValidationError
 from fie_events.bus import EventBus
+from fie_finance.metrics import AnalysisResult
 from fie_finance.money import Money, Rate
 from fie_observability.logging import get_logger
 from fie_observability.tracing import traced

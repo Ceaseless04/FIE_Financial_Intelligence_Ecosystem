@@ -13,8 +13,8 @@ from __future__ import annotations
 from decimal import ROUND_HALF_UP, Decimal
 from itertools import pairwise
 
-from atlas.analysis.results import Metric, Unit, derived, unavailable
 from atlas.domain.statements import FinancialStatements
+from fie_finance.metrics import Metric, Unit, derived, unavailable
 from fie_finance.money import Money
 from fie_finance.periods import FiscalPeriod
 
